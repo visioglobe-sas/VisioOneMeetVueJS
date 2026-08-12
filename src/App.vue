@@ -32,6 +32,9 @@ const placeId = ref('')
 const simulatingOccupancy = ref(false)
 let occupancyTimer = null
 let occupancyColorIndex = 0
+// The place ID actually targeted by the running timer — captured at start,
+// deliberately not re-read from `placeId` on stop (see stopOccupancySimulation).
+let simulatingPlaceId = null
 
 function updateOccupancy(targetPlaceId, color) {
   const venue = venueRef.value
@@ -54,6 +57,7 @@ function startOccupancySimulation() {
   if (!targetPlaceId) return
 
   simulatingOccupancy.value = true
+  simulatingPlaceId = targetPlaceId
   occupancyColorIndex = 0
   updateOccupancy(targetPlaceId, OCCUPANCY_COLORS[occupancyColorIndex])
   occupancyTimer = setInterval(() => {
@@ -65,11 +69,13 @@ function startOccupancySimulation() {
 function stopOccupancySimulation() {
   clearInterval(occupancyTimer)
   occupancyTimer = null
-  const targetPlaceId = placeId.value.trim()
-  if (targetPlaceId) {
+  // Reset the POI that was actually being simulated — not whatever `placeId`
+  // currently holds, which may have been edited since simulation started.
+  if (simulatingPlaceId) {
     // Reset the surface rather than leaving it stuck on the last simulated color.
-    updateOccupancy(targetPlaceId, undefined)
+    updateOccupancy(simulatingPlaceId, undefined)
   }
+  simulatingPlaceId = null
   simulatingOccupancy.value = false
 }
 
