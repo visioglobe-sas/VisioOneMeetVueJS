@@ -4,12 +4,15 @@ import { useI18n } from 'vue-i18n'
 
 import BottomSheet from '../components/BottomSheet.vue'
 import VisioOneMap from '../components/VisioOneMap.vue'
+import { features } from '../features'
 
 const props = defineProps({
   slug: { type: String, required: true },
 })
 
 const { t } = useI18n()
+
+const currentFeature = features.find((feature) => feature.slug === props.slug)
 
 const visioOneHash = import.meta.env.VITE_VISIOONE_HASH
 const visioOneBaseURL = import.meta.env.VITE_VISIOONE_BASE_URL
@@ -108,7 +111,10 @@ onBeforeUnmount(() => clearInterval(occupancyTimer))
       @poi-click="handlePOIClick"
     />
 
-    <router-link to="/" class="back-link">&larr; {{ t('home.back') }}</router-link>
+    <div class="top-bar">
+      <router-link to="/" class="back-link">&larr; {{ t('home.back') }}</router-link>
+      <span v-if="currentFeature" class="top-bar__title">{{ t(currentFeature.titleKey) }}</span>
+    </div>
 
     <button
       v-if="(props.slug === 'reset-view' && viewRef) || props.slug === 'occupancy-simulated'"
@@ -145,16 +151,36 @@ onBeforeUnmount(() => clearInterval(occupancyTimer))
   height: 100vh;
 }
 
-.back-link {
+.top-bar {
   position: absolute;
   top: 12px;
   left: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 10;
+}
+
+.back-link {
   border-radius: 6px;
   padding: 8px 14px;
   background: rgba(0, 0, 0, 0.7);
   color: #fff;
   font-weight: 600;
   text-decoration: none;
+  white-space: nowrap;
+}
+
+.top-bar__title {
+  border-radius: 6px;
+  padding: 8px 14px;
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .fab {
