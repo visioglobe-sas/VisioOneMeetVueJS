@@ -10,4 +10,9 @@ export const features = [
     titleKey: 'features.poiClick.title',
     descriptionKey: 'features.poiClick.description',
   },
+  {
+    slug: 'goto-poi',
+    titleKey: 'features.gotoPoi.title',
+    descriptionKey: 'features.gotoPoi.description',
+  },
 ]

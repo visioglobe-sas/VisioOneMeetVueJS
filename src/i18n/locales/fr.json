@@ -25,6 +25,14 @@
       "idLabel": "ID",
       "floorLabel": "Étage",
       "categoriesLabel": "Catégories"
+    },
+    "gotoPoi": {
+      "title": "Aller à un POI",
+      "description": "Saisissez un ID de lieu pour le centrer et le mettre en évidence sur la carte.",
+      "placeholder": "ID du lieu",
+      "go": "Go",
+      "clear": "Effacer",
+      "notFound": "Aucun POI trouvé avec cet ID."
     }
   }
 }
