@@ -8,6 +8,11 @@ const { t } = useI18n()
 
 <template>
   <main class="home">
+    <div class="home__header">
+      <img src="/favicon.svg" alt="" class="home__logo" />
+      <span class="home__app-name">VisioOne + Vue 3 by VisioGlobe</span>
+    </div>
+
     <h1>{{ t('home.title') }}</h1>
 
     <ul class="home__list">
@@ -26,6 +31,22 @@ const { t } = useI18n()
   max-width: 480px;
   margin: 0 auto;
   padding: 32px 16px;
+}
+
+.home__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.home__logo {
+  width: 32px;
+  height: 32px;
+}
+
+.home__app-name {
+  font-weight: 600;
 }
 
 .home__list {

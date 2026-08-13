@@ -2,6 +2,7 @@
 import { onBeforeUnmount, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
+import BottomSheet from '../components/BottomSheet.vue'
 import VisioOneMap from '../components/VisioOneMap.vue'
 
 const props = defineProps({
@@ -106,26 +107,24 @@ onBeforeUnmount(() => clearInterval(occupancyTimer))
       @poi-click="handlePOIClick"
     />
 
-    <router-link to="/" class="back-link">{{ t('home.back') }}</router-link>
+    <router-link to="/" class="back-link">&larr; {{ t('home.back') }}</router-link>
 
-    <button
-      v-if="props.slug === 'reset-view' && viewRef"
-      class="reset-view-button"
-      @click="resetView"
-    >
-      {{ t('features.resetView.title') }}
-    </button>
-
-    <div v-if="props.slug === 'occupancy-simulated'" class="occupancy-panel">
-      <input
-        v-model="placeId"
-        class="occupancy-panel__input"
-        :placeholder="t('features.occupancySimulated.placeholder')"
-      />
-      <button class="occupancy-panel__button" @click="toggleOccupancySimulation">
-        {{ simulatingOccupancy ? t('features.occupancySimulated.stop') : t('features.occupancySimulated.start') }}
+    <BottomSheet v-if="(props.slug === 'reset-view' && viewRef) || props.slug === 'occupancy-simulated'">
+      <button v-if="props.slug === 'reset-view'" class="reset-view-button" @click="resetView">
+        {{ t('features.resetView.title') }}
       </button>
-    </div>
+
+      <div v-else-if="props.slug === 'occupancy-simulated'" class="occupancy-panel">
+        <input
+          v-model="placeId"
+          class="occupancy-panel__input"
+          :placeholder="t('features.occupancySimulated.placeholder')"
+        />
+        <button class="occupancy-panel__button" @click="toggleOccupancySimulation">
+          {{ simulatingOccupancy ? t('features.occupancySimulated.stop') : t('features.occupancySimulated.start') }}
+        </button>
+      </div>
+    </BottomSheet>
   </main>
 </template>
 
@@ -149,14 +148,8 @@ onBeforeUnmount(() => clearInterval(occupancyTimer))
 }
 
 .occupancy-panel {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
   display: flex;
   gap: 8px;
-  padding: 12px;
-  background: rgba(0, 0, 0, 0.7);
 }
 
 .occupancy-panel__input {
@@ -179,9 +172,7 @@ onBeforeUnmount(() => clearInterval(occupancyTimer))
 }
 
 .reset-view-button {
-  position: absolute;
-  top: 12px;
-  right: 12px;
+  width: 100%;
   border-radius: 6px;
   border: none;
   padding: 8px 14px;
