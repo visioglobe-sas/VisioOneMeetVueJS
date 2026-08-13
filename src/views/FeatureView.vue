@@ -37,8 +37,24 @@ function handleError(error) {
   console.error('VisioOne error:', error)
 }
 
+// event.pois is an array because a single click can hit several overlapping
+// POIs (e.g. a marker sitting on top of a surface) — see POIEvent in the SDK
+// typings (@visioglobe/visioone/dist/src/VisioOne/View/Events/POIEvent.d.ts).
+const clickedPois = ref([])
+
+function poiName(poi) {
+  return poi.labels?.[0]?.text || poi.id
+}
+
+function poiCategories(poi) {
+  return (poi.categories ?? []).map((category) => category.id).join(', ')
+}
+
 function handlePOIClick(event) {
   console.log('POI clicked:', event)
+  if (props.slug !== 'poi-click') return
+  clickedPois.value = event.pois ?? []
+  controlsOpen.value = true
 }
 
 // Stand-in for a real occupancy sensor feed: cycles a POI's surface through
@@ -116,6 +132,13 @@ onBeforeUnmount(() => clearInterval(occupancyTimer))
       <span v-if="currentFeature" class="top-bar__title">{{ t(currentFeature.titleKey) }}</span>
     </div>
 
+    <div
+      v-if="props.slug === 'poi-click' && !controlsOpen && clickedPois.length === 0"
+      class="poi-hint"
+    >
+      {{ t('features.poiClick.hint') }}
+    </div>
+
     <button
       v-if="(props.slug === 'reset-view' && viewRef) || props.slug === 'occupancy-simulated'"
       class="fab"
@@ -139,6 +162,20 @@ onBeforeUnmount(() => clearInterval(occupancyTimer))
         <button class="occupancy-panel__button" @click="toggleOccupancySimulation">
           {{ simulatingOccupancy ? t('features.occupancySimulated.stop') : t('features.occupancySimulated.start') }}
         </button>
+      </div>
+
+      <div v-else-if="props.slug === 'poi-click'" class="poi-panel">
+        <h2 class="poi-panel__title">{{ t('features.poiClick.panelTitle') }}</h2>
+        <div v-for="poi in clickedPois" :key="poi.id" class="poi-panel__entry">
+          <div class="poi-panel__name">{{ poiName(poi) }}</div>
+          <div class="poi-panel__meta">{{ t('features.poiClick.idLabel') }}: {{ poi.id }}</div>
+          <div v-if="poi.floor" class="poi-panel__meta">
+            {{ t('features.poiClick.floorLabel') }}: {{ poi.floor.id }}
+          </div>
+          <div v-if="poi.categories?.length" class="poi-panel__meta">
+            {{ t('features.poiClick.categoriesLabel') }}: {{ poiCategories(poi) }}
+          </div>
+        </div>
       </div>
     </BottomSheet>
   </main>
@@ -181,6 +218,21 @@ onBeforeUnmount(() => clearInterval(occupancyTimer))
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.poi-hint {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: 20px;
+  margin: 0 auto;
+  max-width: 320px;
+  border-radius: 6px;
+  padding: 10px 14px;
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  text-align: center;
+  z-index: 10;
 }
 
 .fab {
@@ -237,5 +289,31 @@ onBeforeUnmount(() => clearInterval(occupancyTimer))
   color: #fff;
   font-weight: 600;
   cursor: pointer;
+}
+
+.poi-panel__title {
+  margin: 0 0 12px;
+  font-size: 1.1em;
+}
+
+.poi-panel__entry {
+  border-radius: 6px;
+  padding: 10px 12px;
+  background: #222;
+  margin-bottom: 8px;
+}
+
+.poi-panel__entry:last-child {
+  margin-bottom: 0;
+}
+
+.poi-panel__name {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.poi-panel__meta {
+  font-size: 0.9em;
+  opacity: 0.8;
 }
 </style>

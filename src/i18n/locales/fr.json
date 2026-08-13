@@ -16,6 +16,15 @@
       "placeholder": "ID du lieu",
       "start": "Simuler l'occupation",
       "stop": "Arrêter la simulation"
+    },
+    "poiClick": {
+      "title": "Clic sur un POI",
+      "description": "Tapez un POI sur la carte pour révéler ses détails.",
+      "hint": "Tapez un POI sur la carte pour voir ses détails ici.",
+      "panelTitle": "Détails du POI",
+      "idLabel": "ID",
+      "floorLabel": "Étage",
+      "categoriesLabel": "Catégories"
     }
   }
 }
