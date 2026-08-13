@@ -8,11 +8,17 @@ const visioOneBaseURL = import.meta.env.VITE_VISIOONE_BASE_URL
 const visioOneAuthToken = import.meta.env.VITE_VISIOONE_AUTH_TOKEN
 
 const venueRef = ref(null)
+const viewRef = ref(null)
 
 function handleReady({ venue, view }) {
   venueRef.value = venue
+  viewRef.value = view
   console.log('VisioOne venue loaded:', venue)
   console.log('VisioOne view created:', view)
+}
+
+function resetView() {
+  viewRef.value?.goToGlobal()
 }
 
 function handleError(error) {
@@ -93,6 +99,8 @@ onBeforeUnmount(() => clearInterval(occupancyTimer))
       @poi-click="handlePOIClick"
     />
 
+    <button v-if="viewRef" class="reset-view-button" @click="resetView">Reset view</button>
+
     <div class="occupancy-panel">
       <input v-model="placeId" class="occupancy-panel__input" placeholder="Place ID" />
       <button class="occupancy-panel__button" @click="toggleOccupancySimulation">
@@ -130,6 +138,19 @@ onBeforeUnmount(() => clearInterval(occupancyTimer))
 }
 
 .occupancy-panel__button {
+  border-radius: 6px;
+  border: none;
+  padding: 8px 14px;
+  background: #057dbc;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.reset-view-button {
+  position: absolute;
+  top: 12px;
+  right: 12px;
   border-radius: 6px;
   border: none;
   padding: 8px 14px;
