@@ -16,6 +16,15 @@
       "placeholder": "Place ID",
       "start": "Simulate occupancy",
       "stop": "Stop occupancy simulation"
+    },
+    "poiClick": {
+      "title": "POI click",
+      "description": "Tap a POI on the map to reveal its details.",
+      "hint": "Tap a POI on the map to see its details here.",
+      "panelTitle": "POI details",
+      "idLabel": "ID",
+      "floorLabel": "Floor",
+      "categoriesLabel": "Categories"
     }
   }
 }
