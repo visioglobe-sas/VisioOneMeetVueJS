@@ -8,7 +8,7 @@ Il n'y a pas de vrai capteur derrière : un `setInterval` fait tourner la couleu
 
 ## Step by step
 
-1. **Récupérer la `venue`** : `VisioOneMap` émet déjà `@ready="{ venue, view }"` (voir `handleReady` dans `App.vue`) — stocker `venue` dans un `ref` pour pouvoir l'utiliser plus tard, en dehors du handler.
+1. **Récupérer la `venue`** : `VisioOneMap` émet déjà `@ready="{ venue, view }"` (voir `handleReady` dans `src/views/FeatureView.vue`) — stocker `venue` dans un `ref` pour pouvoir l'utiliser plus tard, en dehors du handler.
 2. **Écrire une fonction `updateOccupancy(placeId, color)`** qui retrouve le POI et colore ses surfaces :
    ```js
    function updateOccupancy(targetPlaceId, color) {

@@ -1,0 +1,21 @@
+{
+  "home": {
+    "title": "VisioOne demos",
+    "back": "Back",
+    "openControls": "Open controls",
+    "closeControls": "Close controls"
+  },
+  "features": {
+    "resetView": {
+      "title": "Reset view",
+      "description": "Return the camera to the venue's default view."
+    },
+    "occupancySimulated": {
+      "title": "Simulated occupancy",
+      "description": "Toggle a place's occupancy color with simulated data.",
+      "placeholder": "Place ID",
+      "start": "Simulate occupancy",
+      "stop": "Stop occupancy simulation"
+    }
+  }
+}
