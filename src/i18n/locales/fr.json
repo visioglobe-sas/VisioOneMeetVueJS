@@ -1,0 +1,19 @@
+{
+  "home": {
+    "title": "Démos VisioOne",
+    "back": "Retour"
+  },
+  "features": {
+    "resetView": {
+      "title": "Réinitialiser la vue",
+      "description": "Recentre la caméra sur la vue par défaut du lieu."
+    },
+    "occupancySimulated": {
+      "title": "Occupation simulée",
+      "description": "Bascule la couleur d'occupation d'un lieu avec des données simulées.",
+      "placeholder": "ID du lieu",
+      "start": "Simuler l'occupation",
+      "stop": "Arrêter la simulation"
+    }
+  }
+}

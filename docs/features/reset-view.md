@@ -6,7 +6,7 @@ Recentre la caméra sur la carte en appelant `view.goToGlobal()` sur l'instance 
 
 ## Step by step
 
-1. **Récupérer la `view`** : `VisioOneMap` émet déjà `@ready="{ venue, view }"` (voir `handleReady` dans `App.vue`) — stocker `view` dans un `ref` dédié (`viewRef`), au même titre que `venueRef` pour la feature d'occupation simulée.
+1. **Récupérer la `view`** : `VisioOneMap` émet déjà `@ready="{ venue, view }"` (voir `handleReady` dans `src/views/FeatureView.vue`) — stocker `view` dans un `ref` dédié (`viewRef`), au même titre que `venueRef` pour la feature d'occupation simulée.
    ```js
    const viewRef = ref(null)
 
