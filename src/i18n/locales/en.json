@@ -1,7 +1,9 @@
 {
   "home": {
     "title": "VisioOne demos",
-    "back": "Back"
+    "back": "Back",
+    "openControls": "Open controls",
+    "closeControls": "Close controls"
   },
   "features": {
     "resetView": {

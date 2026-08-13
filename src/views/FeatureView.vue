@@ -17,6 +17,7 @@ const visioOneAuthToken = import.meta.env.VITE_VISIOONE_AUTH_TOKEN
 
 const venueRef = ref(null)
 const viewRef = ref(null)
+const controlsOpen = ref(false)
 
 function handleReady({ venue, view }) {
   venueRef.value = venue
@@ -109,7 +110,16 @@ onBeforeUnmount(() => clearInterval(occupancyTimer))
 
     <router-link to="/" class="back-link">&larr; {{ t('home.back') }}</router-link>
 
-    <BottomSheet v-if="(props.slug === 'reset-view' && viewRef) || props.slug === 'occupancy-simulated'">
+    <button
+      v-if="(props.slug === 'reset-view' && viewRef) || props.slug === 'occupancy-simulated'"
+      class="fab"
+      :aria-label="t('home.openControls')"
+      @click="controlsOpen = true"
+    >
+      ⚙
+    </button>
+
+    <BottomSheet :visible="controlsOpen" @close="controlsOpen = false">
       <button v-if="props.slug === 'reset-view'" class="reset-view-button" @click="resetView">
         {{ t('features.resetView.title') }}
       </button>
@@ -145,6 +155,27 @@ onBeforeUnmount(() => clearInterval(occupancyTimer))
   color: #fff;
   font-weight: 600;
   text-decoration: none;
+}
+
+.fab {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: none;
+  background: #057dbc;
+  color: #fff;
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    0 4px 8px rgba(0, 0, 0, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  z-index: 15;
 }
 
 .occupancy-panel {

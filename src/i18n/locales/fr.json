@@ -1,7 +1,9 @@
 {
   "home": {
     "title": "Démos VisioOne",
-    "back": "Retour"
+    "back": "Retour",
+    "openControls": "Ouvrir les commandes",
+    "closeControls": "Fermer les commandes"
   },
   "features": {
     "resetView": {
