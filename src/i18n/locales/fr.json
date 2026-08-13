@@ -33,6 +33,13 @@
       "go": "Go",
       "clear": "Effacer",
       "notFound": "Aucun POI trouvé avec cet ID."
+    },
+    "floorSelector": {
+      "title": "Sélection d'étage",
+      "description": "Changez d'étage ou de bâtiment depuis un contrôle natif piloté par l'app.",
+      "panelTitle": "Étages",
+      "buildingLabel": "Bâtiment",
+      "currentBadge": "Actuel"
     }
   }
 }

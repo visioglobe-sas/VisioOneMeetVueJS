@@ -33,6 +33,13 @@
       "go": "Go",
       "clear": "Clear",
       "notFound": "No POI found with this ID."
+    },
+    "floorSelector": {
+      "title": "Floor selector",
+      "description": "Switch floors and buildings from a native, app-driven control.",
+      "panelTitle": "Floors",
+      "buildingLabel": "Building",
+      "currentBadge": "Current"
     }
   }
 }

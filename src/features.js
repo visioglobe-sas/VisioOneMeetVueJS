@@ -15,4 +15,9 @@ export const features = [
     titleKey: 'features.gotoPoi.title',
     descriptionKey: 'features.gotoPoi.description',
   },
+  {
+    slug: 'floor-selector',
+    titleKey: 'features.floorSelector.title',
+    descriptionKey: 'features.floorSelector.description',
+  },
 ]
