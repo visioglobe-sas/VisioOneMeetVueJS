@@ -25,6 +25,14 @@
       "idLabel": "ID",
       "floorLabel": "Floor",
       "categoriesLabel": "Categories"
+    },
+    "gotoPoi": {
+      "title": "Go to POI",
+      "description": "Enter a place ID to center and highlight it on the map.",
+      "placeholder": "Place ID",
+      "go": "Go",
+      "clear": "Clear",
+      "notFound": "No POI found with this ID."
     }
   }
 }

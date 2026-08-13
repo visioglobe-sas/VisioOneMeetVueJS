@@ -114,6 +114,55 @@ function stopOccupancySimulation() {
 }
 
 onBeforeUnmount(() => clearInterval(occupancyTimer))
+
+// Dedicated Place ID field + Go/Clear buttons — deliberately not wired to
+// map-click (that's the poi-click feature's own panel, see handlePOIClick
+// above). See docs/features/goto-poi.md for why the two aren't merged.
+const goToPoiId = ref('')
+const goToPoiNotFound = ref(false)
+// The POI currently highlighted by "Go" — kept so "Clear" can reset its
+// surfaces even if the input has been edited since, same pattern as
+// simulatingPlaceId above.
+let highlightedPoi = null
+
+function goToPoi() {
+  const venue = venueRef.value
+  const view = viewRef.value
+  if (!venue || !view) return
+
+  const targetId = goToPoiId.value.trim()
+  if (!targetId) return
+
+  const poi = venue.pois.find((p) => p.id === targetId)
+  if (!poi) {
+    goToPoiNotFound.value = true
+    return
+  }
+  goToPoiNotFound.value = false
+
+  clearGoToPoiHighlight()
+  highlightedPoi = poi
+  poi.surfaces.forEach((surface) => venue.updateSurface(surface, { selectionColor: '#057DBC' }))
+  view.goToPOI(poi, {
+    orientation: { pitch: 20 },
+    padding: { top: 100, bottom: 100, left: 100, right: 100 },
+  })
+}
+
+function clearGoToPoiHighlight() {
+  if (!highlightedPoi) return
+  const venue = venueRef.value
+  if (venue) {
+    highlightedPoi.surfaces.forEach((surface) => venue.updateSurface(surface, { selectionColor: undefined }))
+  }
+  highlightedPoi = null
+}
+
+function clearGoToPoi() {
+  clearGoToPoiHighlight()
+  goToPoiId.value = ''
+  goToPoiNotFound.value = false
+}
 </script>
 
 <template>
@@ -140,7 +189,11 @@ onBeforeUnmount(() => clearInterval(occupancyTimer))
     </div>
 
     <button
-      v-if="(props.slug === 'reset-view' && viewRef) || props.slug === 'occupancy-simulated'"
+      v-if="
+        (props.slug === 'reset-view' && viewRef) ||
+        props.slug === 'occupancy-simulated' ||
+        props.slug === 'goto-poi'
+      "
       class="fab"
       :aria-label="t('home.openControls')"
       @click="controlsOpen = true"
@@ -175,6 +228,26 @@ onBeforeUnmount(() => clearInterval(occupancyTimer))
           <div v-if="poi.categories?.length" class="poi-panel__meta">
             {{ t('features.poiClick.categoriesLabel') }}: {{ poiCategories(poi) }}
           </div>
+        </div>
+      </div>
+
+      <div v-else-if="props.slug === 'goto-poi'" class="goto-poi-panel">
+        <input
+          v-model="goToPoiId"
+          class="goto-poi-panel__input"
+          :placeholder="t('features.gotoPoi.placeholder')"
+          @keyup.enter="goToPoi"
+        />
+        <div class="goto-poi-panel__actions">
+          <button class="goto-poi-panel__button" @click="goToPoi">
+            {{ t('features.gotoPoi.go') }}
+          </button>
+          <button class="goto-poi-panel__button goto-poi-panel__button--secondary" @click="clearGoToPoi">
+            {{ t('features.gotoPoi.clear') }}
+          </button>
+        </div>
+        <div v-if="goToPoiNotFound" class="goto-poi-panel__error">
+          {{ t('features.gotoPoi.notFound') }}
         </div>
       </div>
     </BottomSheet>
@@ -315,5 +388,42 @@ onBeforeUnmount(() => clearInterval(occupancyTimer))
 .poi-panel__meta {
   font-size: 0.9em;
   opacity: 0.8;
+}
+
+.goto-poi-panel__input {
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 6px;
+  border: none;
+  padding: 8px 10px;
+  background: #222;
+  color: #fff;
+  margin-bottom: 10px;
+}
+
+.goto-poi-panel__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.goto-poi-panel__button {
+  flex: 1;
+  border-radius: 6px;
+  border: none;
+  padding: 8px 14px;
+  background: #057dbc;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.goto-poi-panel__button--secondary {
+  background: #333;
+}
+
+.goto-poi-panel__error {
+  margin-top: 10px;
+  font-size: 0.9em;
+  color: #ff6b6b;
 }
 </style>
