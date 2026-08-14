@@ -40,6 +40,17 @@
       "panelTitle": "Étages",
       "buildingLabel": "Bâtiment",
       "currentBadge": "Actuel"
+    },
+    "computeNavigation": {
+      "title": "Itinéraire",
+      "description": "Calcule et affiche un itinéraire entre deux ID de lieu.",
+      "panelTitle": "Itinéraire",
+      "fromPlaceholder": "Départ (ID du lieu)",
+      "toPlaceholder": "Arrivée (ID du lieu)",
+      "go": "Itinéraire",
+      "clear": "Effacer",
+      "notFound": "Aucun POI trouvé pour l'un de ces ID.",
+      "routeNotFound": "Aucun itinéraire trouvé entre ces deux lieux."
     }
   }
 }

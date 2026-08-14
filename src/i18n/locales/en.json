@@ -40,6 +40,17 @@
       "panelTitle": "Floors",
       "buildingLabel": "Building",
       "currentBadge": "Current"
+    },
+    "computeNavigation": {
+      "title": "Itinerary",
+      "description": "Compute and display a route between two place IDs.",
+      "panelTitle": "Itinerary",
+      "fromPlaceholder": "From (place ID)",
+      "toPlaceholder": "To (place ID)",
+      "go": "Itinerary",
+      "clear": "Clear",
+      "notFound": "No POI found for one of these IDs.",
+      "routeNotFound": "No route found between these two places."
     }
   }
 }
