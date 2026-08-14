@@ -223,6 +223,67 @@ function selectFloor(floor) {
   if (!view || floor.id === currentFloorId.value) return
   view.goToFloor(floor)
 }
+
+// Itinerary between two Place IDs, via venue.computeNavigation() + a
+// NavigationTrace made current on the view. Both POIs are resolved through
+// venue.pois.find (same lookup pattern as goto-poi — no venue.getPOIById in
+// the SDK typings) so a typo surfaces as an explicit "not found" message
+// rather than a silent no-op. See docs/features/compute-navigation.md.
+const itineraryOriginId = ref('')
+const itineraryDestinationId = ref('')
+const itineraryError = ref('')
+// The NavigationTrace currently displayed, if any — kept outside any ref
+// since it's only ever read by clearItinerary/computeItinerary, same pattern
+// as highlightedPoi for goto-poi.
+let currentNavigationTrace = null
+
+function computeItinerary() {
+  const venue = venueRef.value
+  const view = viewRef.value
+  if (!venue || !view) return
+
+  const originId = itineraryOriginId.value.trim()
+  const destinationId = itineraryDestinationId.value.trim()
+  if (!originId || !destinationId) return
+
+  const originPoi = venue.pois.find((p) => p.id === originId)
+  const destinationPoi = venue.pois.find((p) => p.id === destinationId)
+  if (!originPoi || !destinationPoi) {
+    itineraryError.value = t('features.computeNavigation.notFound')
+    return
+  }
+
+  clearItinerary()
+
+  try {
+    const navigation = venue.computeNavigation({ origin: originPoi, destination: destinationPoi })
+    currentNavigationTrace = venue.createNavigationTrace(navigation)
+    view.setCurrentNavigationTrace(currentNavigationTrace)
+    itineraryError.value = ''
+  } catch (error) {
+    // computeNavigation throws RouteNotFoundError/SourceOutOfLimitError/
+    // DestinationOutOfLimitError (see Navigation/Errors in the SDK typings)
+    // when the two POIs aren't connected by the routing graph.
+    console.error('computeNavigation failed:', error)
+    itineraryError.value = t('features.computeNavigation.routeNotFound')
+  }
+}
+
+function clearItinerary() {
+  const venue = venueRef.value
+  if (venue && currentNavigationTrace) {
+    viewRef.value?.removeCurrentNavigationTrace()
+    venue.removeNavigationTrace(currentNavigationTrace)
+  }
+  currentNavigationTrace = null
+  itineraryError.value = ''
+}
+
+function clearItineraryFields() {
+  clearItinerary()
+  itineraryOriginId.value = ''
+  itineraryDestinationId.value = ''
+}
 </script>
 
 <template>
@@ -253,7 +314,8 @@ function selectFloor(floor) {
         (props.slug === 'reset-view' && viewRef) ||
         props.slug === 'occupancy-simulated' ||
         props.slug === 'goto-poi' ||
-        props.slug === 'floor-selector'
+        props.slug === 'floor-selector' ||
+        props.slug === 'compute-navigation'
       "
       class="fab"
       :aria-label="t('home.openControls')"
@@ -341,6 +403,32 @@ function selectFloor(floor) {
               {{ t('features.floorSelector.currentBadge') }}
             </span>
           </button>
+        </div>
+      </div>
+
+      <div v-else-if="props.slug === 'compute-navigation'" class="itinerary-panel">
+        <h2 class="itinerary-panel__title">{{ t('features.computeNavigation.panelTitle') }}</h2>
+        <input
+          v-model="itineraryOriginId"
+          class="itinerary-panel__input"
+          :placeholder="t('features.computeNavigation.fromPlaceholder')"
+        />
+        <input
+          v-model="itineraryDestinationId"
+          class="itinerary-panel__input"
+          :placeholder="t('features.computeNavigation.toPlaceholder')"
+          @keyup.enter="computeItinerary"
+        />
+        <div class="itinerary-panel__actions">
+          <button class="itinerary-panel__button" @click="computeItinerary">
+            {{ t('features.computeNavigation.go') }}
+          </button>
+          <button class="itinerary-panel__button itinerary-panel__button--secondary" @click="clearItineraryFields">
+            {{ t('features.computeNavigation.clear') }}
+          </button>
+        </div>
+        <div v-if="itineraryError" class="itinerary-panel__error">
+          {{ itineraryError }}
         </div>
       </div>
     </BottomSheet>
@@ -584,5 +672,47 @@ function selectFloor(floor) {
   font-weight: 600;
   text-transform: uppercase;
   opacity: 0.85;
+}
+
+.itinerary-panel__title {
+  margin: 0 0 12px;
+  font-size: 1.1em;
+}
+
+.itinerary-panel__input {
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 6px;
+  border: none;
+  padding: 8px 10px;
+  background: #222;
+  color: #fff;
+  margin-bottom: 10px;
+}
+
+.itinerary-panel__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.itinerary-panel__button {
+  flex: 1;
+  border-radius: 6px;
+  border: none;
+  padding: 8px 14px;
+  background: #057dbc;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.itinerary-panel__button--secondary {
+  background: #333;
+}
+
+.itinerary-panel__error {
+  margin-top: 10px;
+  font-size: 0.9em;
+  color: #ff6b6b;
 }
 </style>

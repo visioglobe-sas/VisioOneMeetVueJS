@@ -20,4 +20,9 @@ export const features = [
     titleKey: 'features.floorSelector.title',
     descriptionKey: 'features.floorSelector.description',
   },
+  {
+    slug: 'compute-navigation',
+    titleKey: 'features.computeNavigation.title',
+    descriptionKey: 'features.computeNavigation.description',
+  },
 ]
