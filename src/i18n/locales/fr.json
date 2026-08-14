@@ -63,6 +63,17 @@
         "search": "Recherche",
         "userTracking": "Suivi utilisateur"
       }
+    },
+    "simulatedPosition": {
+      "title": "Position simulée",
+      "description": "Anime une position simulée avec un cercle de précision entre deux POI.",
+      "panelTitle": "Position simulée",
+      "fromPlaceholder": "Départ (ID du lieu)",
+      "toPlaceholder": "Arrivée (ID du lieu)",
+      "radiusLabel": "Rayon de précision",
+      "start": "Démarrer la simulation",
+      "stop": "Arrêter la simulation",
+      "notFound": "Aucun POI trouvé pour l'un de ces ID."
     }
   }
 }

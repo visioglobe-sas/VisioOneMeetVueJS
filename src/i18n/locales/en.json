@@ -63,6 +63,17 @@
         "search": "Search",
         "userTracking": "User tracking"
       }
+    },
+    "simulatedPosition": {
+      "title": "Simulated position",
+      "description": "Animate a simulated position with an accuracy circle between two POIs.",
+      "panelTitle": "Simulated position",
+      "fromPlaceholder": "From (place ID)",
+      "toPlaceholder": "To (place ID)",
+      "radiusLabel": "Accuracy radius",
+      "start": "Start simulation",
+      "stop": "Stop simulation",
+      "notFound": "No POI found for one of these IDs."
     }
   }
 }

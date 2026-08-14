@@ -30,4 +30,9 @@ export const features = [
     titleKey: 'features.uiPartVisibility.title',
     descriptionKey: 'features.uiPartVisibility.description',
   },
+  {
+    slug: 'simulated-position',
+    titleKey: 'features.simulatedPosition.title',
+    descriptionKey: 'features.simulatedPosition.description',
+  },
 ]

@@ -124,6 +124,7 @@ function stopOccupancySimulation() {
 
 onBeforeUnmount(() => {
   clearInterval(occupancyTimer)
+  clearInterval(positionTimer)
   viewRef.value?.removeEventListener('currentfloorchanged', handleCurrentFloorChanged)
 })
 
@@ -310,6 +311,117 @@ function toggleUIPart(uiPart) {
   uiPartVisibility.value[uiPart] = isVisible
   view.setUIPartVisible(uiPart, isVisible)
 }
+
+// Simulated tracked position: walks a dot + accuracy circle back and forth
+// between two Place IDs, via view.injectTrackedPosition() (no bridge, same
+// direct-SDK-call pattern as the rest of this file). Neither POI carries a
+// lat/lng field directly — it's read off its first marker/label/image, which
+// all carry a Position in the same shape injectTrackedPosition expects. See
+// docs/features/simulated-position.md.
+const POSITION_INTERVAL_MS = 150
+// Fraction of the origin->destination segment advanced per tick (~150ms *
+// 1/0.02 ticks = ~7.5s one-way, then back), not a real speed/time model.
+const POSITION_STEP = 0.02
+
+const originPoiId = ref('')
+const destinationPoiId = ref('')
+const positionError = ref('')
+const accuracyRadius = ref(5)
+const simulatingPosition = ref(false)
+let positionTimer = null
+// The resolved origin/destination positions and progress of the currently
+// running simulation — module-locals, not refs, same pattern as
+// simulatingPlaceId/highlightedPoi above (captured at Start, not re-read from
+// the input fields on every tick).
+let positionOrigin = null
+let positionDestination = null
+let positionProgress = 0
+let positionDirection = 1
+
+function resolvePoiPosition(id) {
+  const venue = venueRef.value
+  if (!venue) return null
+  const poi = venue.pois.find((p) => p.id === id)
+  if (!poi) return null
+  return poi.markers?.[0]?.position ?? poi.labels?.[0]?.position ?? poi.images?.[0]?.position ?? null
+}
+
+function lerpPosition(from, to, progress) {
+  return {
+    latitude: from.latitude + (to.latitude - from.latitude) * progress,
+    longitude: from.longitude + (to.longitude - from.longitude) * progress,
+    altitude: (from.altitude ?? 0) + ((to.altitude ?? 0) - (from.altitude ?? 0)) * progress,
+  }
+}
+
+function toggleSimulatedPosition() {
+  if (simulatingPosition.value) {
+    stopSimulatedPosition()
+  } else {
+    startSimulatedPosition()
+  }
+}
+
+function startSimulatedPosition() {
+  const view = viewRef.value
+  if (!view) return
+
+  const originId = originPoiId.value.trim()
+  const destinationId = destinationPoiId.value.trim()
+  if (!originId || !destinationId) return
+
+  const origin = resolvePoiPosition(originId)
+  const destination = resolvePoiPosition(destinationId)
+  if (!origin || !destination) {
+    positionError.value = t('features.simulatedPosition.notFound')
+    return
+  }
+  positionError.value = ''
+
+  positionOrigin = origin
+  positionDestination = destination
+  positionProgress = 0
+  positionDirection = 1
+
+  // Mandatory before the first injectTrackedPosition call, or it throws —
+  // see PositionTrackerOptions/View.allowTracking in the SDK typings.
+  view.allowTracking = true
+  simulatingPosition.value = true
+  injectSimulatedPositionTick()
+  positionTimer = setInterval(injectSimulatedPositionTick, POSITION_INTERVAL_MS)
+}
+
+function injectSimulatedPositionTick() {
+  const view = viewRef.value
+  if (!view || !positionOrigin || !positionDestination) return
+
+  view.injectTrackedPosition({
+    position: lerpPosition(positionOrigin, positionDestination, positionProgress),
+    // Re-read live on every tick: moving the slider while the simulation
+    // runs changes the radius on the next tick, no restart needed.
+    precisionCircleRadius: accuracyRadius.value,
+  })
+
+  positionProgress += POSITION_STEP * positionDirection
+  if (positionProgress >= 1) {
+    positionProgress = 1
+    positionDirection = -1
+  } else if (positionProgress <= 0) {
+    positionProgress = 0
+    positionDirection = 1
+  }
+}
+
+function stopSimulatedPosition() {
+  clearInterval(positionTimer)
+  positionTimer = null
+  positionOrigin = null
+  positionDestination = null
+  // No dedicated "stop tracking" call in the SDK — allowTracking = false is
+  // what removes the marker/accuracy circle from the map.
+  if (viewRef.value) viewRef.value.allowTracking = false
+  simulatingPosition.value = false
+}
 </script>
 
 <template>
@@ -342,7 +454,8 @@ function toggleUIPart(uiPart) {
         props.slug === 'goto-poi' ||
         props.slug === 'floor-selector' ||
         props.slug === 'compute-navigation' ||
-        props.slug === 'ui-part-visibility'
+        props.slug === 'ui-part-visibility' ||
+        props.slug === 'simulated-position'
       "
       class="fab"
       :aria-label="t('home.openControls')"
@@ -470,6 +583,37 @@ function toggleUIPart(uiPart) {
             @change="toggleUIPart(part)"
           />
         </label>
+      </div>
+
+      <div v-else-if="props.slug === 'simulated-position'" class="position-panel">
+        <h2 class="position-panel__title">{{ t('features.simulatedPosition.panelTitle') }}</h2>
+        <input
+          v-model="originPoiId"
+          class="position-panel__input"
+          :placeholder="t('features.simulatedPosition.fromPlaceholder')"
+        />
+        <input
+          v-model="destinationPoiId"
+          class="position-panel__input"
+          :placeholder="t('features.simulatedPosition.toPlaceholder')"
+        />
+        <label class="position-panel__radius">
+          <span>{{ t('features.simulatedPosition.radiusLabel') }}: {{ accuracyRadius }} m</span>
+          <input
+            v-model.number="accuracyRadius"
+            type="range"
+            min="1"
+            max="20"
+            step="1"
+            class="position-panel__slider"
+          />
+        </label>
+        <button class="position-panel__button" @click="toggleSimulatedPosition">
+          {{ simulatingPosition ? t('features.simulatedPosition.stop') : t('features.simulatedPosition.start') }}
+        </button>
+        <div v-if="positionError" class="position-panel__error">
+          {{ positionError }}
+        </div>
       </div>
     </BottomSheet>
   </main>
@@ -810,5 +954,50 @@ function toggleUIPart(uiPart) {
 
 .ui-part-panel__switch:checked::before {
   transform: translateX(20px);
+}
+
+.position-panel__title {
+  margin: 0 0 12px;
+  font-size: 1.1em;
+}
+
+.position-panel__input {
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 6px;
+  border: none;
+  padding: 8px 10px;
+  background: #222;
+  color: #fff;
+  margin-bottom: 10px;
+}
+
+.position-panel__radius {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+  font-size: 0.9em;
+}
+
+.position-panel__slider {
+  width: 100%;
+}
+
+.position-panel__button {
+  width: 100%;
+  border-radius: 6px;
+  border: none;
+  padding: 8px 14px;
+  background: #057dbc;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.position-panel__error {
+  margin-top: 10px;
+  font-size: 0.9em;
+  color: #ff6b6b;
 }
 </style>
