@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, onBeforeUnmount, ref, shallowRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import BottomSheet from '../components/BottomSheet.vue'
@@ -18,8 +18,16 @@ const visioOneHash = import.meta.env.VITE_VISIOONE_HASH
 const visioOneBaseURL = import.meta.env.VITE_VISIOONE_BASE_URL
 const visioOneAuthToken = import.meta.env.VITE_VISIOONE_AUTH_TOKEN
 
-const venueRef = ref(null)
-const viewRef = ref(null)
+// shallowRef, not ref: `venue`/`view` are VisioOne SDK class instances. A
+// deep ref() would wrap every nested object (POIs, Surfaces, Floors...) in a
+// Vue reactive Proxy, and the SDK checks object identity internally — a
+// proxied Surface/Floor/POI passed back into updateSurface/goToFloor/
+// computeNavigation is never === the real instance the SDK registered,
+// causing SurfaceNotFoundError/FloorNotFoundError/POINotFoundError/
+// BuildingNotFoundError. Matches VisioOneMap.vue's own shallowRef usage for
+// the same objects.
+const venueRef = shallowRef(null)
+const viewRef = shallowRef(null)
 const controlsOpen = ref(false)
 
 function handleReady({ venue, view }) {
