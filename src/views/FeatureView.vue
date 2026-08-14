@@ -1,5 +1,5 @@
 <script setup>
-import { onBeforeUnmount, ref } from 'vue'
+import { computed, onBeforeUnmount, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import BottomSheet from '../components/BottomSheet.vue'
@@ -27,6 +27,7 @@ function handleReady({ venue, view }) {
   viewRef.value = view
   console.log('VisioOne venue loaded:', venue)
   console.log('VisioOne view created:', view)
+  if (props.slug === 'floor-selector') initFloorSelector()
 }
 
 function resetView() {
@@ -113,7 +114,10 @@ function stopOccupancySimulation() {
   simulatingOccupancy.value = false
 }
 
-onBeforeUnmount(() => clearInterval(occupancyTimer))
+onBeforeUnmount(() => {
+  clearInterval(occupancyTimer)
+  viewRef.value?.removeEventListener('currentfloorchanged', handleCurrentFloorChanged)
+})
 
 // Dedicated Place ID field + Go/Clear buttons — deliberately not wired to
 // map-click (that's the poi-click feature's own panel, see handlePOIClick
@@ -163,6 +167,62 @@ function clearGoToPoi() {
   goToPoiId.value = ''
   goToPoiNotFound.value = false
 }
+
+// Floor/building selector: reads the actual loaded venue's buildings/floors
+// (venue.venueLayout.buildings[].floors[]) — never hardcoded — and drives the
+// camera with view.goToFloor()/view.goToBuilding(). The SDK already shows its
+// own default floor-selector widget on the map; this is a second, app-driven
+// control demonstrating that a client can build their own UI on top of the
+// same API. See docs/features/floor-selector.md.
+const selectedBuildingId = ref(null)
+const currentFloorId = ref(null)
+
+const buildings = computed(() => venueRef.value?.venueLayout.buildings ?? [])
+
+const selectedBuilding = computed(
+  () => buildings.value.find((building) => building.id === selectedBuildingId.value) ?? null,
+)
+
+// Highest floor first (typical floor-selector reading order), based on the
+// SDK's own levelIndex rather than array order.
+const floorsForSelectedBuilding = computed(() =>
+  [...(selectedBuilding.value?.floors ?? [])].sort((a, b) => b.levelIndex - a.levelIndex),
+)
+
+function syncCurrentFloor() {
+  const view = viewRef.value
+  if (!view) return
+  currentFloorId.value = view.currentFloor?.id ?? null
+}
+
+// Keeps this panel's highlighted floor correct even if the current
+// floor/building changes through the SDK's own floor-selector widget, not
+// just through this panel's buttons.
+function handleCurrentFloorChanged(event) {
+  currentFloorId.value = event.newFloor?.id ?? null
+  if (event.newBuilding) selectedBuildingId.value = event.newBuilding.id
+}
+
+function initFloorSelector() {
+  const view = viewRef.value
+  if (!view) return
+  selectedBuildingId.value = view.currentBuilding?.id ?? buildings.value[0]?.id ?? null
+  syncCurrentFloor()
+  view.addEventListener('currentfloorchanged', handleCurrentFloorChanged)
+}
+
+function selectBuilding(building) {
+  const view = viewRef.value
+  if (!view || building.id === selectedBuildingId.value) return
+  selectedBuildingId.value = building.id
+  view.goToBuilding(building)
+}
+
+function selectFloor(floor) {
+  const view = viewRef.value
+  if (!view || floor.id === currentFloorId.value) return
+  view.goToFloor(floor)
+}
 </script>
 
 <template>
@@ -192,7 +252,8 @@ function clearGoToPoi() {
       v-if="
         (props.slug === 'reset-view' && viewRef) ||
         props.slug === 'occupancy-simulated' ||
-        props.slug === 'goto-poi'
+        props.slug === 'goto-poi' ||
+        props.slug === 'floor-selector'
       "
       class="fab"
       :aria-label="t('home.openControls')"
@@ -248,6 +309,38 @@ function clearGoToPoi() {
         </div>
         <div v-if="goToPoiNotFound" class="goto-poi-panel__error">
           {{ t('features.gotoPoi.notFound') }}
+        </div>
+      </div>
+
+      <div v-else-if="props.slug === 'floor-selector'" class="floor-panel">
+        <h2 class="floor-panel__title">{{ t('features.floorSelector.panelTitle') }}</h2>
+
+        <div v-if="buildings.length > 1" class="floor-panel__buildings">
+          <span class="floor-panel__buildings-label">{{ t('features.floorSelector.buildingLabel') }}</span>
+          <button
+            v-for="building in buildings"
+            :key="building.id"
+            class="floor-panel__building-button"
+            :class="{ 'floor-panel__building-button--active': building.id === selectedBuildingId }"
+            @click="selectBuilding(building)"
+          >
+            {{ building.id }}
+          </button>
+        </div>
+
+        <div class="floor-panel__floors">
+          <button
+            v-for="floor in floorsForSelectedBuilding"
+            :key="floor.id"
+            class="floor-panel__floor-button"
+            :class="{ 'floor-panel__floor-button--active': floor.id === currentFloorId }"
+            @click="selectFloor(floor)"
+          >
+            <span class="floor-panel__floor-id">{{ floor.id }}</span>
+            <span v-if="floor.id === currentFloorId" class="floor-panel__floor-badge">
+              {{ t('features.floorSelector.currentBadge') }}
+            </span>
+          </button>
         </div>
       </div>
     </BottomSheet>
@@ -425,5 +518,71 @@ function clearGoToPoi() {
   margin-top: 10px;
   font-size: 0.9em;
   color: #ff6b6b;
+}
+
+.floor-panel__title {
+  margin: 0 0 12px;
+  font-size: 1.1em;
+}
+
+.floor-panel__buildings {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.floor-panel__buildings-label {
+  font-size: 0.85em;
+  opacity: 0.7;
+  margin-right: 4px;
+}
+
+.floor-panel__building-button {
+  border-radius: 6px;
+  border: none;
+  padding: 6px 12px;
+  background: #333;
+  color: #fff;
+  cursor: pointer;
+}
+
+.floor-panel__building-button--active {
+  background: #057dbc;
+  font-weight: 600;
+}
+
+.floor-panel__floors {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 40vh;
+  overflow-y: auto;
+}
+
+.floor-panel__floor-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-radius: 6px;
+  border: none;
+  padding: 10px 14px;
+  background: #222;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+
+.floor-panel__floor-button--active {
+  background: #057dbc;
+}
+
+.floor-panel__floor-badge {
+  font-size: 0.75em;
+  font-weight: 600;
+  text-transform: uppercase;
+  opacity: 0.85;
 }
 </style>
