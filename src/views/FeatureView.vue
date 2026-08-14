@@ -292,6 +292,24 @@ function clearItineraryFields() {
   itineraryOriginId.value = ''
   itineraryDestinationId.value = ''
 }
+
+// Selective UI masking: toggles one of the SDK's own default UI overlays via
+// view.setUIPartVisible(uiPart, isVisible) — called directly on the live
+// `view` instance, no bridge needed (this is the one platform where the app
+// talks to the SDK object directly). The 5 UIPart values below are exact and
+// case-sensitive (VisioOne SDK, View.ts) — no others exist. All default to
+// visible, matching the SDK's own default (nothing is hidden until a switch
+// is flipped). See docs/features/ui-part-visibility.md.
+const UI_PARTS = ['floorSelector', 'navigation', 'poiDetails', 'search', 'userTracking']
+const uiPartVisibility = ref(Object.fromEntries(UI_PARTS.map((part) => [part, true])))
+
+function toggleUIPart(uiPart) {
+  const view = viewRef.value
+  if (!view) return
+  const isVisible = !uiPartVisibility.value[uiPart]
+  uiPartVisibility.value[uiPart] = isVisible
+  view.setUIPartVisible(uiPart, isVisible)
+}
 </script>
 
 <template>
@@ -323,7 +341,8 @@ function clearItineraryFields() {
         props.slug === 'occupancy-simulated' ||
         props.slug === 'goto-poi' ||
         props.slug === 'floor-selector' ||
-        props.slug === 'compute-navigation'
+        props.slug === 'compute-navigation' ||
+        props.slug === 'ui-part-visibility'
       "
       class="fab"
       :aria-label="t('home.openControls')"
@@ -438,6 +457,19 @@ function clearItineraryFields() {
         <div v-if="itineraryError" class="itinerary-panel__error">
           {{ itineraryError }}
         </div>
+      </div>
+
+      <div v-else-if="props.slug === 'ui-part-visibility'" class="ui-part-panel">
+        <h2 class="ui-part-panel__title">{{ t('features.uiPartVisibility.panelTitle') }}</h2>
+        <label v-for="part in UI_PARTS" :key="part" class="ui-part-panel__row">
+          <span class="ui-part-panel__label">{{ t(`features.uiPartVisibility.parts.${part}`) }}</span>
+          <input
+            type="checkbox"
+            class="ui-part-panel__switch"
+            :checked="uiPartVisibility[part]"
+            @change="toggleUIPart(part)"
+          />
+        </label>
       </div>
     </BottomSheet>
   </main>
@@ -722,5 +754,61 @@ function clearItineraryFields() {
   margin-top: 10px;
   font-size: 0.9em;
   color: #ff6b6b;
+}
+
+.ui-part-panel__title {
+  margin: 0 0 12px;
+  font-size: 1.1em;
+}
+
+.ui-part-panel__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-radius: 6px;
+  padding: 10px 12px;
+  background: #222;
+  margin-bottom: 8px;
+  cursor: pointer;
+}
+
+.ui-part-panel__row:last-child {
+  margin-bottom: 0;
+}
+
+.ui-part-panel__label {
+  font-weight: 600;
+}
+
+.ui-part-panel__switch {
+  appearance: none;
+  position: relative;
+  flex-shrink: 0;
+  width: 44px;
+  height: 24px;
+  border-radius: 12px;
+  background: #444;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.ui-part-panel__switch::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.2s ease;
+}
+
+.ui-part-panel__switch:checked {
+  background: #057dbc;
+}
+
+.ui-part-panel__switch:checked::before {
+  transform: translateX(20px);
 }
 </style>

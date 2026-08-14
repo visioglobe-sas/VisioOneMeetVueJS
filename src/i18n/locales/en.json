@@ -51,6 +51,18 @@
       "clear": "Clear",
       "notFound": "No POI found for one of these IDs.",
       "routeNotFound": "No route found between these two places."
+    },
+    "uiPartVisibility": {
+      "title": "UI visibility",
+      "description": "Show or hide individual parts of the map's default UI.",
+      "panelTitle": "UI parts",
+      "parts": {
+        "floorSelector": "Floor selector",
+        "navigation": "Navigation",
+        "poiDetails": "POI details",
+        "search": "Search",
+        "userTracking": "User tracking"
+      }
     }
   }
 }

@@ -51,6 +51,18 @@
       "clear": "Effacer",
       "notFound": "Aucun POI trouvé pour l'un de ces ID.",
       "routeNotFound": "Aucun itinéraire trouvé entre ces deux lieux."
+    },
+    "uiPartVisibility": {
+      "title": "Visibilité de l'UI",
+      "description": "Afficher ou masquer individuellement les parties de l'UI par défaut de la carte.",
+      "panelTitle": "Parties de l'UI",
+      "parts": {
+        "floorSelector": "Sélecteur d'étage",
+        "navigation": "Navigation",
+        "poiDetails": "Détails du POI",
+        "search": "Recherche",
+        "userTracking": "Suivi utilisateur"
+      }
     }
   }
 }

@@ -25,4 +25,9 @@ export const features = [
     titleKey: 'features.computeNavigation.title',
     descriptionKey: 'features.computeNavigation.description',
   },
+  {
+    slug: 'ui-part-visibility',
+    titleKey: 'features.uiPartVisibility.title',
+    descriptionKey: 'features.uiPartVisibility.description',
+  },
 ]
