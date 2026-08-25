@@ -15,10 +15,26 @@ Edit `.env` and set `VITE_VISIOONE_HASH` to your map's hash, available from [my.
 npm run dev
 ```
 
+## Features
+
+Each feature below is a self-contained example screen. The bullet links go to a developer doc covering the actual SDK call(s) it demonstrates.
+
+- [Reset View](docs/features/reset-view.md) — recenter the camera on the whole venue with `view.goToGlobal()`.
+- [Real-Time Occupancy (Simulated Data)](docs/features/occupancy-simulated.md) — color a POI's surface to reflect an occupancy status via `venue.updateSurface`.
+- [React to a POI Click](docs/features/poi-click.md) — read the `poiclick` event payload and display details for the tapped POI(s).
+- [Go To POI](docs/features/goto-poi.md) — look up a POI by ID and center/zoom the camera on it with `view.goToPOI()`.
+- [Floor / Building Selector](docs/features/floor-selector.md) — build a custom floor/building switcher on top of `venue.venueLayout` and `view.goToFloor()`/`view.goToBuilding()`.
+- [Compute Navigation](docs/features/compute-navigation.md) — compute and display a route between two places with `venue.computeNavigation()`.
+- [UI Part Visibility](docs/features/ui-part-visibility.md) — show/hide the SDK's default on-map widgets individually with `view.setUIPartVisible()`.
+- [Simulated Position](docs/features/simulated-position.md) — animate a tracked position between two POIs with `view.injectTrackedPosition()`.
+- [Camera Lock on Position](docs/features/camera-lock-on-position.md) — lock the camera's focus onto the currently tracked position via `view.lockCameraPositionOnTracking`.
+
 ## Structure
 
 - `src/components/VisioOneMap.vue` — wraps the VisioOne SDK lifecycle (`createVisioOne`, `loadVenue`, `createView`, teardown) as a Vue component. Emits `ready`, `error`, and `poi-click`, and exposes `visioOne`/`venue`/`view` via `defineExpose` for parent components that need direct SDK access (navigation, custom POIs, camera control, etc.).
-- `src/App.vue` — reads the map configuration from environment variables and renders `VisioOneMap` full-screen.
+- `src/App.vue` — renders the router view; navigation between the home menu and each feature screen goes through `vue-router`.
+- `src/views/HomeView.vue` — the menu screen, listing the features registered in `src/features.js`.
+- `src/views/FeatureView.vue` — hosts `VisioOneMap` for each feature screen, reads the map configuration from environment variables, and drives the SDK calls specific to the selected feature.
 
 ## Environment variables
 
