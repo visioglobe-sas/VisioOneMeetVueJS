@@ -35,4 +35,9 @@ export const features = [
     titleKey: 'features.simulatedPosition.title',
     descriptionKey: 'features.simulatedPosition.description',
   },
+  {
+    slug: 'camera-lock-on-position',
+    titleKey: 'features.cameraLockOnPosition.title',
+    descriptionKey: 'features.cameraLockOnPosition.description',
+  },
 ]

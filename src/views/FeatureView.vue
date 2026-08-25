@@ -125,6 +125,9 @@ function stopOccupancySimulation() {
 onBeforeUnmount(() => {
   clearInterval(occupancyTimer)
   clearInterval(positionTimer)
+  // Leaving the screen counts as "the simulation stops" too — don't leave the
+  // camera lock engaged for whatever destroys/recreates the view next.
+  resetCameraLock()
   viewRef.value?.removeEventListener('currentfloorchanged', handleCurrentFloorChanged)
 })
 
@@ -374,6 +377,9 @@ function startSimulatedPosition() {
   const destination = resolvePoiPosition(destinationId)
   if (!origin || !destination) {
     positionError.value = t('features.simulatedPosition.notFound')
+    // Nothing is tracked, so any lingering camera lock from a previous run
+    // would be meaningless — keep the "stopped -> unlocked" contract intact.
+    resetCameraLock()
     return
   }
   positionError.value = ''
@@ -421,6 +427,31 @@ function stopSimulatedPosition() {
   // what removes the marker/accuracy circle from the map.
   if (viewRef.value) viewRef.value.allowTracking = false
   simulatingPosition.value = false
+  // Locking is a deliberate per-run opt-in, never a lingering state — see
+  // resetCameraLock and docs/features/camera-lock-on-position.md.
+  resetCameraLock()
+}
+
+// Camera lock on the tracked position: view.lockCameraPositionOnTracking is a
+// plain boolean toggled directly on the exposed `view` instance, same
+// direct-SDK-call pattern as allowTracking/injectTrackedPosition above. Only
+// has a visible effect once allowTracking is true (i.e. a simulation is
+// running) — setting it beforehand is a documented no-op on the SDK side, not
+// an exception (unlike injectTrackedPosition), so no extra guard is needed
+// here beyond disabling the checkbox while nothing is being tracked. See
+// docs/features/camera-lock-on-position.md.
+const lockCameraOnPosition = ref(false)
+
+function resetCameraLock() {
+  lockCameraOnPosition.value = false
+  if (viewRef.value) viewRef.value.lockCameraPositionOnTracking = false
+}
+
+function toggleCameraLock() {
+  const view = viewRef.value
+  if (!view) return
+  lockCameraOnPosition.value = !lockCameraOnPosition.value
+  view.lockCameraPositionOnTracking = lockCameraOnPosition.value
 }
 </script>
 
@@ -455,7 +486,8 @@ function stopSimulatedPosition() {
         props.slug === 'floor-selector' ||
         props.slug === 'compute-navigation' ||
         props.slug === 'ui-part-visibility' ||
-        props.slug === 'simulated-position'
+        props.slug === 'simulated-position' ||
+        props.slug === 'camera-lock-on-position'
       "
       class="fab"
       :aria-label="t('home.openControls')"
@@ -614,6 +646,50 @@ function stopSimulatedPosition() {
         <div v-if="positionError" class="position-panel__error">
           {{ positionError }}
         </div>
+      </div>
+
+      <div v-else-if="props.slug === 'camera-lock-on-position'" class="position-panel">
+        <h2 class="position-panel__title">{{ t('features.cameraLockOnPosition.panelTitle') }}</h2>
+        <input
+          v-model="originPoiId"
+          class="position-panel__input"
+          :placeholder="t('features.simulatedPosition.fromPlaceholder')"
+        />
+        <input
+          v-model="destinationPoiId"
+          class="position-panel__input"
+          :placeholder="t('features.simulatedPosition.toPlaceholder')"
+        />
+        <label class="position-panel__radius">
+          <span>{{ t('features.simulatedPosition.radiusLabel') }}: {{ accuracyRadius }} m</span>
+          <input
+            v-model.number="accuracyRadius"
+            type="range"
+            min="1"
+            max="20"
+            step="1"
+            class="position-panel__slider"
+          />
+        </label>
+        <button class="position-panel__button" @click="toggleSimulatedPosition">
+          {{ simulatingPosition ? t('features.simulatedPosition.stop') : t('features.simulatedPosition.start') }}
+        </button>
+        <div v-if="positionError" class="position-panel__error">
+          {{ positionError }}
+        </div>
+        <label
+          class="ui-part-panel__row camera-lock-panel__row"
+          :class="{ 'camera-lock-panel__row--disabled': !simulatingPosition }"
+        >
+          <span class="ui-part-panel__label">{{ t('features.cameraLockOnPosition.toggleLabel') }}</span>
+          <input
+            type="checkbox"
+            class="ui-part-panel__switch"
+            :checked="lockCameraOnPosition"
+            :disabled="!simulatingPosition"
+            @change="toggleCameraLock"
+          />
+        </label>
       </div>
     </BottomSheet>
   </main>
@@ -999,5 +1075,18 @@ function stopSimulatedPosition() {
   margin-top: 10px;
   font-size: 0.9em;
   color: #ff6b6b;
+}
+
+.camera-lock-panel__row {
+  margin-top: 14px;
+}
+
+.camera-lock-panel__row--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ui-part-panel__switch:disabled {
+  cursor: not-allowed;
 }
 </style>
