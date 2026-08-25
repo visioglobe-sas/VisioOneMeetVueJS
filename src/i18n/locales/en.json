@@ -74,6 +74,12 @@
       "start": "Start simulation",
       "stop": "Stop simulation",
       "notFound": "No POI found for one of these IDs."
+    },
+    "cameraLockOnPosition": {
+      "title": "Camera lock on position",
+      "description": "Recenter and lock the camera onto a simulated tracked position, GPS-app style.",
+      "panelTitle": "Camera lock on position",
+      "toggleLabel": "Recenter camera on position"
     }
   }
 }

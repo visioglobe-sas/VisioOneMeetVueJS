@@ -74,6 +74,12 @@
       "start": "Démarrer la simulation",
       "stop": "Arrêter la simulation",
       "notFound": "Aucun POI trouvé pour l'un de ces ID."
+    },
+    "cameraLockOnPosition": {
+      "title": "Verrouillage caméra sur la position",
+      "description": "Recentre et verrouille la caméra sur une position simulée suivie, à la manière d'une app GPS.",
+      "panelTitle": "Verrouillage caméra sur la position",
+      "toggleLabel": "Recentrer la caméra sur la position"
     }
   }
 }
