@@ -595,7 +595,18 @@ function clearCustomData() {
 // whole category's worth of POIs at once instead of a single Place ID. See
 // docs/features/category-highlight.md.
 const CATEGORY_HIGHLIGHT_COLOR = '#FF6B00'
-const categories = computed(() => venueRef.value?.categories ?? [])
+// category.id is a raw internal identifier (a numeric string on the shared
+// demo map, e.g. "1".."11"), not itself human-readable — confirmed live. The
+// display name comes from venue.translator.translateCategory(). id is still
+// what filtering/highlighting uses; label is for display only.
+const categories = computed(() => {
+  const venue = venueRef.value
+  if (!venue) return []
+  return venue.categories.map((category) => ({
+    id: category.id,
+    label: venue.translator.translateCategory(category, venue.currentLocale).name || category.id,
+  }))
+})
 const selectedCategoryId = ref(null)
 // The POIs actually recolored by the current selection — kept so Clear (or
 // picking a different category) can revert exactly those, same pattern as
@@ -960,7 +971,7 @@ function clearCategoryHighlight() {
             :class="{ 'category-panel__chip--active': category.id === selectedCategoryId }"
             @click="selectCategory(category)"
           >
-            {{ category.id }}
+            {{ category.label }}
           </button>
         </div>
         <button

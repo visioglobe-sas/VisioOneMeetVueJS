@@ -7,8 +7,13 @@ Highlights every POI belonging to a chosen category (e.g. all restaurants, all s
 ## SDK usage
 
 ```js
-// venue.categories: Category[], Category = { readonly id: string }
-const categories = venue.categories
+// venue.categories: Category[], Category = { readonly id: string }. id is a
+// raw internal identifier, not a display name — resolve the human-readable
+// name via venue.translator.translateCategory().
+const categories = venue.categories.map((category) => ({
+  id: category.id,
+  label: venue.translator.translateCategory(category, venue.currentLocale).name || category.id,
+}))
 
 function poisInCategory(categoryId) {
   return venue.pois.filter((poi) => (poi.categories ?? []).some((category) => category.id === categoryId))
@@ -29,7 +34,7 @@ function clearHighlight(pois) {
 }
 ```
 
-`Category` (`node_modules/@visioglobe/visioone/dist/src/VisioOne/Venue/Category.d.ts`) is just `{ readonly id: string }` — a single string identifier, no separate display-name field. `venue.categories` is the venue's full list; `poi.categories` is the (possibly multi-valued) subset attached to a given POI. Both are populated from whatever categories were authored in VisioMapEditor for that map — on a well-authored map the `id` itself already reads as a human-readable name (e.g. `Food and Beverage`, `Shops`), but that's a per-map authoring convention, not an SDK guarantee.
+`Category` (`node_modules/@visioglobe/visioone/dist/src/VisioOne/Venue/Category.d.ts`) is just `{ readonly id: string }` — a raw internal identifier (a numeric string on the shared demo map, e.g. `"1"`.."`11`"`), not a display name. `venue.categories` is the venue's full list; `poi.categories` is the (possibly multi-valued) subset attached to a given POI. The human-readable name comes from `venue.translator.translateCategory(category, venue.currentLocale).name` — see "Things to know".
 
 ## Things to know
 
@@ -38,6 +43,7 @@ function clearHighlight(pois) {
 - **A POI can belong to several categories.** `poi.categories` is an array, so `.some(...)` (not `.find`/equality on a single field) is the correct membership test — a POI tagged both "Food and Beverage" and "Wellness and Recreation" (a café inside a spa, say) shows up under either.
 - **Only one category highlighted at a time in this demo.** This is an app-level UX choice, not an SDK constraint — the SDK happily lets any number of surfaces carry a custom color simultaneously. Selecting a new category here first reverts the previously-highlighted POIs' surfaces to `'initial'` before applying the new color, so switching categories doesn't leave stale colors behind. Nothing stops a real integration from highlighting several categories concurrently with different colors, as long as each set of POIs/surfaces is tracked separately for its own revert.
 - No dedicated venue/map is needed for this feature — any map with categories authored in VisioMapEditor works; the code reads `venue.categories` generically and never hardcodes a category name.
+- **`category.id` is never a display name, confirmed live.** It's tempting to assume a well-authored map's `id` already reads as human-readable, but that's not how the SDK resolves it — `id` is a raw internal identifier (numeric on the shared demo map) regardless of authoring quality. Always resolve the display label via `venue.translator.translateCategory(category, venue.currentLocale).name`, the same idiom used for building/floor labels elsewhere in this repo; `id` remains what filtering/highlighting must use.
 
 ## Learn more
 
