@@ -585,6 +585,63 @@ function clearCustomData() {
   customDataNotFound.value = false
   customDataEntries.value = null
 }
+
+// Category highlight: no dedicated "highlight by category" SDK method exists
+// — built from primitives. venue.categories (Category[], { readonly id }) is
+// the venue's full category list; a POI can carry several of its own
+// (poi.categories). Matching POIs are found with a plain filter, then each
+// of their surfaces gets venue.updateSurface(surface, { color }) — exactly
+// the same call as occupancy-simulated/clickable-surface, just applied to a
+// whole category's worth of POIs at once instead of a single Place ID. See
+// docs/features/category-highlight.md.
+const CATEGORY_HIGHLIGHT_COLOR = '#FF6B00'
+const categories = computed(() => venueRef.value?.categories ?? [])
+const selectedCategoryId = ref(null)
+// The POIs actually recolored by the current selection — kept so Clear (or
+// picking a different category) can revert exactly those, same pattern as
+// highlightedPoi/clickableSurfacePoi above.
+let highlightedCategoryPois = []
+
+function poisInCategory(categoryId) {
+  const venue = venueRef.value
+  if (!venue) return []
+  return venue.pois.filter((poi) => (poi.categories ?? []).some((category) => category.id === categoryId))
+}
+
+function selectCategory(category) {
+  if (!venueRef.value) return
+
+  // Clicking the already-selected category again just clears it.
+  if (selectedCategoryId.value === category.id) {
+    clearCategoryHighlight()
+    return
+  }
+
+  // Only one category highlighted at a time — revert the previous one first.
+  clearCategoryHighlight()
+
+  // Not every POI has surfaces (some are point/marker-only) — those simply
+  // don't visually change here, which is expected, not a bug.
+  const pois = poisInCategory(category.id)
+  pois.forEach((poi) => poi.surfaces.forEach((surface) => venueRef.value.updateSurface(surface, { color: CATEGORY_HIGHLIGHT_COLOR })))
+
+  highlightedCategoryPois = pois
+  selectedCategoryId.value = category.id
+}
+
+function clearCategoryHighlight() {
+  const venue = venueRef.value
+  if (venue) {
+    // 'initial' is the SDK's documented sentinel to restore a surface's
+    // bundle-defined color (SurfaceUpdateOptions) — not the same as
+    // `undefined`/omitting the key.
+    highlightedCategoryPois.forEach((poi) =>
+      poi.surfaces.forEach((surface) => venue.updateSurface(surface, { color: 'initial' })),
+    )
+  }
+  highlightedCategoryPois = []
+  selectedCategoryId.value = null
+}
 </script>
 
 <template>
@@ -621,7 +678,8 @@ function clearCustomData() {
         props.slug === 'simulated-position' ||
         props.slug === 'camera-lock-on-position' ||
         props.slug === 'clickable-surface' ||
-        props.slug === 'custom-data'
+        props.slug === 'custom-data' ||
+        props.slug === 'category-highlight'
       "
       class="fab"
       :aria-label="t('home.openControls')"
@@ -886,6 +944,32 @@ function clearCustomData() {
             <span class="custom-data-panel__value">{{ value }}</span>
           </div>
         </div>
+      </div>
+
+      <div v-else-if="props.slug === 'category-highlight'" class="category-panel">
+        <h2 class="category-panel__title">{{ t('features.categoryHighlight.panelTitle') }}</h2>
+        <div v-if="categories.length === 0" class="category-panel__empty">
+          {{ t('features.categoryHighlight.empty') }}
+        </div>
+        <div v-else class="category-panel__chips">
+          <button
+            v-for="category in categories"
+            :key="category.id"
+            type="button"
+            class="category-panel__chip"
+            :class="{ 'category-panel__chip--active': category.id === selectedCategoryId }"
+            @click="selectCategory(category)"
+          >
+            {{ category.id }}
+          </button>
+        </div>
+        <button
+          class="goto-poi-panel__button goto-poi-panel__button--secondary category-panel__clear"
+          :disabled="!selectedCategoryId"
+          @click="clearCategoryHighlight"
+        >
+          {{ t('features.categoryHighlight.clear') }}
+        </button>
       </div>
     </BottomSheet>
   </main>
@@ -1353,5 +1437,44 @@ function clearCustomData() {
 
 .ui-part-panel__switch:disabled {
   cursor: not-allowed;
+}
+
+.category-panel__title {
+  margin: 0 0 12px;
+  font-size: 1.1em;
+}
+
+.category-panel__empty {
+  font-size: 0.9em;
+  opacity: 0.8;
+}
+
+.category-panel__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-height: 40vh;
+  overflow-y: auto;
+  margin-bottom: 14px;
+}
+
+.category-panel__chip {
+  border-radius: 999px;
+  border: 1px solid #057dbc;
+  padding: 6px 14px;
+  background: transparent;
+  color: #fff;
+  font-size: 0.9em;
+  cursor: pointer;
+}
+
+.category-panel__chip--active {
+  background: #ff6b00;
+  border-color: #ff6b00;
+  font-weight: 600;
+}
+
+.category-panel__clear {
+  width: 100%;
 }
 </style>
