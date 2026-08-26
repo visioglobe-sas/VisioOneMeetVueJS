@@ -50,4 +50,9 @@ export const features = [
     titleKey: 'features.customData.title',
     descriptionKey: 'features.customData.description',
   },
+  {
+    slug: 'category-highlight',
+    titleKey: 'features.categoryHighlight.title',
+    descriptionKey: 'features.categoryHighlight.description',
+  },
 ]

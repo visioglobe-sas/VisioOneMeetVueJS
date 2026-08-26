@@ -99,6 +99,13 @@
       "clear": "Effacer",
       "notFound": "Aucun POI trouvé avec cet ID.",
       "empty": "Aucune donnée personnalisée pour ce POI."
+    },
+    "categoryHighlight": {
+      "title": "Highlight par catégorie",
+      "description": "Met en évidence tous les POI d'une catégorie choisie en un tap.",
+      "panelTitle": "Catégories",
+      "empty": "Ce lieu n'a aucune catégorie.",
+      "clear": "Effacer"
     }
   }
 }
