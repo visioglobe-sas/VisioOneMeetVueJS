@@ -28,6 +28,7 @@ Each feature below is a self-contained example screen. The bullet links go to a 
 - [UI Part Visibility](docs/features/ui-part-visibility.md) — show/hide the SDK's default on-map widgets individually with `view.setUIPartVisible()`.
 - [Simulated Position](docs/features/simulated-position.md) — animate a tracked position between two POIs with `view.injectTrackedPosition()`.
 - [Camera Lock on Position](docs/features/camera-lock-on-position.md) — lock the camera's focus onto the currently tracked position via `view.lockCameraPositionOnTracking`.
+- [Clickable Surface](docs/features/clickable-surface.md) — make a POI's surface interactive so the SDK swaps its color on hover/tap via `venue.updateSurface`.
 
 ## Structure
 

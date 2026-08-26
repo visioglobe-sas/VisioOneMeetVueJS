@@ -40,4 +40,9 @@ export const features = [
     titleKey: 'features.cameraLockOnPosition.title',
     descriptionKey: 'features.cameraLockOnPosition.description',
   },
+  {
+    slug: 'clickable-surface',
+    titleKey: 'features.clickableSurface.title',
+    descriptionKey: 'features.clickableSurface.description',
+  },
 ]
