@@ -106,6 +106,23 @@
       "panelTitle": "Categories",
       "empty": "This venue has no categories.",
       "clear": "Clear"
+    },
+    "dynamicPoiCrud": {
+      "title": "Dynamic POI CRUD",
+      "description": "Create, update and remove a POI at runtime, without republishing the map.",
+      "panelTitle": "Dynamic POI",
+      "newIdPlaceholder": "New POI ID",
+      "anchorIdPlaceholder": "Anchor POI ID (copy its position)",
+      "textPlaceholder": "Label text",
+      "create": "Create",
+      "updateText": "Update text",
+      "remove": "Remove",
+      "none": "No dynamic POI created yet.",
+      "createdLabel": "Created",
+      "alreadyTracked": "Remove the current dynamic POI before creating another one.",
+      "alreadyExists": "A POI with this ID already exists in the venue.",
+      "anchorNotFound": "No POI found with this anchor ID.",
+      "anchorNoPosition": "This POI has no position to copy (no label or marker)."
     }
   }
 }

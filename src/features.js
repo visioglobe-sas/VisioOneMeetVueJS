@@ -55,4 +55,9 @@ export const features = [
     titleKey: 'features.categoryHighlight.title',
     descriptionKey: 'features.categoryHighlight.description',
   },
+  {
+    slug: 'dynamic-poi-crud',
+    titleKey: 'features.dynamicPoiCrud.title',
+    descriptionKey: 'features.dynamicPoiCrud.description',
+  },
 ]

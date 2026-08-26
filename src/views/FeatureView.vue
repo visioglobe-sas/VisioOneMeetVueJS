@@ -653,6 +653,103 @@ function clearCategoryHighlight() {
   highlightedCategoryPois = []
   selectedCategoryId.value = null
 }
+
+// Dynamic POI CRUD: venue.createPOI() makes a bare POI — a purely logical
+// id/floor/categories container, with no visual representation of its own
+// (readonly images/labels/lines/surfaces/markers all start empty) — so a
+// Label is attached right after via venue.createLabel() to make it visible,
+// at a position copied from an existing "anchor" POI (no map-tap UI in this
+// demo). venue.updatePOI() can only ever change categories, never anything
+// visual, so "editing" this POI's content here means venue.updateLabel()-ing
+// its attached label's text instead. venue.removePOI() cascades: it also
+// removes the attached Label from the view, no separate removeLabel call
+// needed. Only one dynamic POI tracked at a time, simplest demo state. See
+// docs/features/dynamic-poi-crud.md.
+const DEFAULT_LABEL_WIDTH = 2
+
+const newPoiId = ref('')
+const anchorPoiId = ref('')
+const labelText = ref('')
+const dynamicPoiErrorKey = ref('')
+// The actual POI/Label SDK instances currently tracked are kept as
+// module-locals, not refs — same split as highlightedPoi/clickableSurfacePoi
+// above — while their id/text are mirrored into refs purely for the template
+// to read.
+let trackedPoi = null
+let trackedLabel = null
+const trackedPoiId = ref('')
+const trackedLabelText = ref('')
+
+function resolveAnchorPosition(anchor) {
+  // Whichever visual element exists first — a label or a marker — carries a
+  // Position in the same WGS84 shape createLabel expects.
+  return anchor.labels?.[0]?.position ?? anchor.markers?.[0]?.position ?? null
+}
+
+function createDynamicPoi() {
+  const venue = venueRef.value
+  if (!venue || trackedPoi) return
+
+  dynamicPoiErrorKey.value = ''
+
+  const id = newPoiId.value.trim()
+  const anchorId = anchorPoiId.value.trim()
+  if (!id || !anchorId) return
+
+  const anchor = venue.pois.find((p) => p.id === anchorId)
+  if (!anchor) {
+    dynamicPoiErrorKey.value = 'features.dynamicPoiCrud.anchorNotFound'
+    return
+  }
+
+  const position = resolveAnchorPosition(anchor)
+  if (!position) {
+    dynamicPoiErrorKey.value = 'features.dynamicPoiCrud.anchorNoPosition'
+    return
+  }
+
+  let poi
+  try {
+    poi = venue.createPOI({ id })
+  } catch (error) {
+    // POIAlreadyExistsError (see Venue/Errors/POIAlreadyExistsError in the
+    // SDK typings) — a normal outcome for a duplicate ID, not a crash.
+    console.warn('createPOI failed:', error)
+    dynamicPoiErrorKey.value = 'features.dynamicPoiCrud.alreadyExists'
+    return
+  }
+
+  const text = labelText.value.trim() || id
+  const label = venue.createLabel({ poi, position, width: DEFAULT_LABEL_WIDTH, text })
+
+  trackedPoi = poi
+  trackedLabel = label
+  trackedPoiId.value = poi.id
+  trackedLabelText.value = label.text
+}
+
+function updateDynamicPoiText() {
+  const venue = venueRef.value
+  if (!venue || !trackedLabel) return
+
+  const text = labelText.value.trim() || trackedPoiId.value
+  venue.updateLabel(trackedLabel, { text })
+  trackedLabelText.value = text
+}
+
+function removeDynamicPoi() {
+  const venue = venueRef.value
+  if (!venue || !trackedPoi) return
+
+  // Cascades: the attached Label is removed from the view too, no separate
+  // removeLabel call needed.
+  venue.removePOI(trackedPoi)
+  trackedPoi = null
+  trackedLabel = null
+  trackedPoiId.value = ''
+  trackedLabelText.value = ''
+  dynamicPoiErrorKey.value = ''
+}
 </script>
 
 <template>
@@ -690,7 +787,8 @@ function clearCategoryHighlight() {
         props.slug === 'camera-lock-on-position' ||
         props.slug === 'clickable-surface' ||
         props.slug === 'custom-data' ||
-        props.slug === 'category-highlight'
+        props.slug === 'category-highlight' ||
+        props.slug === 'dynamic-poi-crud'
       "
       class="fab"
       :aria-label="t('home.openControls')"
@@ -981,6 +1079,52 @@ function clearCategoryHighlight() {
         >
           {{ t('features.categoryHighlight.clear') }}
         </button>
+      </div>
+
+      <div v-else-if="props.slug === 'dynamic-poi-crud'" class="goto-poi-panel">
+        <h2 class="poi-panel__title">{{ t('features.dynamicPoiCrud.panelTitle') }}</h2>
+        <input
+          v-model="newPoiId"
+          class="goto-poi-panel__input"
+          :disabled="!!trackedPoiId"
+          :placeholder="t('features.dynamicPoiCrud.newIdPlaceholder')"
+        />
+        <input
+          v-model="anchorPoiId"
+          class="goto-poi-panel__input"
+          :disabled="!!trackedPoiId"
+          :placeholder="t('features.dynamicPoiCrud.anchorIdPlaceholder')"
+        />
+        <input
+          v-model="labelText"
+          class="goto-poi-panel__input"
+          :placeholder="t('features.dynamicPoiCrud.textPlaceholder')"
+          @keyup.enter="trackedPoiId ? updateDynamicPoiText() : createDynamicPoi()"
+        />
+        <div class="goto-poi-panel__actions">
+          <button class="goto-poi-panel__button" :disabled="!!trackedPoiId" @click="createDynamicPoi">
+            {{ t('features.dynamicPoiCrud.create') }}
+          </button>
+          <button class="goto-poi-panel__button" :disabled="!trackedPoiId" @click="updateDynamicPoiText">
+            {{ t('features.dynamicPoiCrud.updateText') }}
+          </button>
+          <button
+            class="goto-poi-panel__button goto-poi-panel__button--secondary"
+            :disabled="!trackedPoiId"
+            @click="removeDynamicPoi"
+          >
+            {{ t('features.dynamicPoiCrud.remove') }}
+          </button>
+        </div>
+        <div v-if="dynamicPoiErrorKey" class="goto-poi-panel__error">
+          {{ t(dynamicPoiErrorKey) }}
+        </div>
+        <div v-else-if="trackedPoiId" class="poi-panel__entry dynamic-poi-panel__status">
+          {{ t('features.dynamicPoiCrud.createdLabel') }}: <strong>{{ trackedPoiId }}</strong> — "{{ trackedLabelText }}"
+        </div>
+        <div v-else class="custom-data-panel__empty">
+          {{ t('features.dynamicPoiCrud.none') }}
+        </div>
       </div>
     </BottomSheet>
   </main>
