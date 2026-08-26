@@ -88,6 +88,16 @@
       "enable": "Activer",
       "disable": "Désactiver",
       "notFound": "Aucun POI trouvé avec cet ID."
+    },
+    "customData": {
+      "title": "Données personnalisées",
+      "description": "Lire des données métier (prix, horaires, référence) attachées à un POI dans VisioMapEditor.",
+      "placeholder": "ID du lieu",
+      "load": "Charger",
+      "loading": "Chargement…",
+      "clear": "Effacer",
+      "notFound": "Aucun POI trouvé avec cet ID.",
+      "empty": "Aucune donnée personnalisée pour ce POI."
     }
   }
 }

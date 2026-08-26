@@ -88,6 +88,16 @@
       "enable": "Enable",
       "disable": "Disable",
       "notFound": "No POI found with this ID."
+    },
+    "customData": {
+      "title": "Custom data",
+      "description": "Read custom business data (price, hours, reference) attached to a POI in VisioMapEditor.",
+      "placeholder": "Place ID",
+      "load": "Load",
+      "loading": "Loading…",
+      "clear": "Clear",
+      "notFound": "No POI found with this ID.",
+      "empty": "No custom data for this POI."
     }
   }
 }
