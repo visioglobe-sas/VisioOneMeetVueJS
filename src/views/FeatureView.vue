@@ -18,6 +18,15 @@ const visioOneHash = import.meta.env.VITE_VISIOONE_HASH
 const visioOneBaseURL = import.meta.env.VITE_VISIOONE_BASE_URL
 const visioOneAuthToken = import.meta.env.VITE_VISIOONE_AUTH_TOKEN
 
+// The custom-data feature needs a map that actually has CustomData
+// published — the shared demo map pointed at by VITE_VISIOONE_HASH has
+// none, whatever a given developer's local .env happens to be set to. So,
+// only for this one screen, override the hash with a dedicated map known
+// (confirmed live) to carry real CustomData — see docs/features/custom-data.md.
+// Every other slug keeps using visioOneHash exactly as before.
+const CUSTOM_DATA_MAP_HASH = 'kd9426d8cb3f1c532f22b5bcbd325c280bd351feb'
+const mapHash = computed(() => (props.slug === 'custom-data' ? CUSTOM_DATA_MAP_HASH : visioOneHash))
+
 // shallowRef, not ref: `venue`/`view` are VisioOne SDK class instances. A
 // deep ref() would wrap every nested object (POIs, Surfaces, Floors...) in a
 // Vue reactive Proxy, and the SDK checks object identity internally — a
@@ -504,12 +513,84 @@ function disableClickableSurface() {
   clickableSurfacePoi = null
   clickableSurfaceEnabled.value = false
 }
+
+// Custom data: free business key/value strings (price, opening hours,
+// product reference) attached to a POI in VisioMapEditor, read via
+// venue.getPOICustomData(poi). The venue's CustomData cache starts empty
+// ({}) and is never refreshed automatically on load — venue.refreshCustomData()
+// must be awaited at least once first. "Load" below does both in sequence
+// so the feature exercises both SDK calls from a single action, same
+// judgment call as the combined Start/Stop buttons elsewhere in this file.
+// See docs/features/custom-data.md.
+const customDataPlaceId = ref('')
+const customDataLoading = ref(false)
+const customDataNotFound = ref(false)
+// null = nothing loaded yet; [] = POI found but its CustomData is {}; a
+// non-empty array otherwise. Distinguishing null from [] is what lets the
+// template tell "nothing attempted" from "attempted, found nothing".
+const customDataEntries = ref(null)
+
+// POI ids confirmed (live, against CUSTOM_DATA_MAP_HASH) to carry real,
+// non-empty CustomData — offered as one-tap shortcuts so the feature shows
+// actual key/value pairs without hunting for a valid id first.
+const CUSTOM_DATA_SAMPLE_POI_IDS = ['B1', 'B3-UL00-ID0065', 'B3-UL00-ID0064']
+
+function loadCustomDataSample(id) {
+  customDataPlaceId.value = id
+  loadCustomData()
+}
+
+async function loadCustomData() {
+  const venue = venueRef.value
+  if (!venue) return
+
+  const targetId = customDataPlaceId.value.trim()
+  if (!targetId) return
+
+  customDataLoading.value = true
+  customDataNotFound.value = false
+  customDataEntries.value = null
+
+  try {
+    // refreshCustomData() rejects (rather than resolving) when the venue has
+    // no CustomData published yet — e.g. a 404 on its customData.json,
+    // confirmed against the shared demo map. That's a normal "nothing to
+    // load yet" outcome, not a real failure, so it's swallowed here and the
+    // lookup proceeds against whatever the (possibly still-empty) cache
+    // holds — see docs/features/custom-data.md.
+    try {
+      await venue.refreshCustomData()
+    } catch (error) {
+      console.warn('refreshCustomData failed (likely no CustomData published for this venue):', error)
+    }
+
+    const poi = venue.pois.find((p) => p.id === targetId)
+    if (!poi) {
+      customDataNotFound.value = true
+      return
+    }
+
+    // Synchronous, always returns {} (never null/undefined) — including
+    // when the POI genuinely has no CustomData, which is the expected state
+    // on a map that hasn't published any yet.
+    const customData = venue.getPOICustomData(poi)
+    customDataEntries.value = Object.entries(customData)
+  } finally {
+    customDataLoading.value = false
+  }
+}
+
+function clearCustomData() {
+  customDataPlaceId.value = ''
+  customDataNotFound.value = false
+  customDataEntries.value = null
+}
 </script>
 
 <template>
   <main class="feature">
     <VisioOneMap
-      :hash="visioOneHash"
+      :hash="mapHash"
       :base-url="visioOneBaseURL"
       :authorization-token="visioOneAuthToken"
       @ready="handleReady"
@@ -539,7 +620,8 @@ function disableClickableSurface() {
         props.slug === 'ui-part-visibility' ||
         props.slug === 'simulated-position' ||
         props.slug === 'camera-lock-on-position' ||
-        props.slug === 'clickable-surface'
+        props.slug === 'clickable-surface' ||
+        props.slug === 'custom-data'
       "
       class="fab"
       :aria-label="t('home.openControls')"
@@ -763,6 +845,48 @@ function disableClickableSurface() {
           {{ t('features.clickableSurface.notFound') }}
         </div>
       </div>
+
+      <div v-else-if="props.slug === 'custom-data'" class="goto-poi-panel">
+        <div class="custom-data-panel__samples">
+          <span class="custom-data-panel__samples-label">{{ t('features.customData.samplesLabel') }}</span>
+          <button
+            v-for="sampleId in CUSTOM_DATA_SAMPLE_POI_IDS"
+            :key="sampleId"
+            type="button"
+            class="custom-data-panel__chip"
+            :disabled="customDataLoading"
+            @click="loadCustomDataSample(sampleId)"
+          >
+            {{ sampleId }}
+          </button>
+        </div>
+        <input
+          v-model="customDataPlaceId"
+          class="goto-poi-panel__input"
+          :placeholder="t('features.customData.placeholder')"
+          @keyup.enter="loadCustomData"
+        />
+        <div class="goto-poi-panel__actions">
+          <button class="goto-poi-panel__button" :disabled="customDataLoading" @click="loadCustomData">
+            {{ customDataLoading ? t('features.customData.loading') : t('features.customData.load') }}
+          </button>
+          <button class="goto-poi-panel__button goto-poi-panel__button--secondary" @click="clearCustomData">
+            {{ t('features.customData.clear') }}
+          </button>
+        </div>
+        <div v-if="customDataNotFound" class="goto-poi-panel__error">
+          {{ t('features.customData.notFound') }}
+        </div>
+        <div v-else-if="customDataEntries && customDataEntries.length === 0" class="custom-data-panel__empty">
+          {{ t('features.customData.empty') }}
+        </div>
+        <div v-else-if="customDataEntries" class="custom-data-panel__list">
+          <div v-for="[key, value] in customDataEntries" :key="key" class="custom-data-panel__entry">
+            <span class="custom-data-panel__key">{{ key }}</span>
+            <span class="custom-data-panel__value">{{ value }}</span>
+          </div>
+        </div>
+      </div>
     </BottomSheet>
   </main>
 </template>
@@ -938,6 +1062,75 @@ function disableClickableSurface() {
   margin-top: 10px;
   font-size: 0.9em;
   color: #ff6b6b;
+}
+
+.goto-poi-panel__button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.custom-data-panel__samples {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.custom-data-panel__samples-label {
+  font-size: 0.85em;
+  opacity: 0.7;
+  margin-right: 2px;
+}
+
+.custom-data-panel__chip {
+  border-radius: 999px;
+  border: 1px solid #057dbc;
+  padding: 4px 10px;
+  background: transparent;
+  color: #fff;
+  font-size: 0.85em;
+  cursor: pointer;
+}
+
+.custom-data-panel__chip:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.custom-data-panel__empty {
+  margin-top: 10px;
+  font-size: 0.9em;
+  opacity: 0.8;
+}
+
+.custom-data-panel__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+  max-height: 40vh;
+  overflow-y: auto;
+}
+
+.custom-data-panel__entry {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  border-radius: 6px;
+  padding: 8px 12px;
+  background: #222;
+}
+
+.custom-data-panel__key {
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+.custom-data-panel__value {
+  text-align: right;
+  overflow-wrap: anywhere;
 }
 
 .floor-panel__title {

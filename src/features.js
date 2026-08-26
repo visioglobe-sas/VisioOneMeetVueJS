@@ -45,4 +45,9 @@ export const features = [
     titleKey: 'features.clickableSurface.title',
     descriptionKey: 'features.clickableSurface.description',
   },
+  {
+    slug: 'custom-data',
+    titleKey: 'features.customData.title',
+    descriptionKey: 'features.customData.description',
+  },
 ]
