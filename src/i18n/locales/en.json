@@ -92,6 +92,7 @@
     "customData": {
       "title": "Custom data",
       "description": "Read custom business data (price, hours, reference) attached to a POI in VisioMapEditor.",
+      "samplesLabel": "Try:",
       "placeholder": "Place ID",
       "load": "Load",
       "loading": "Loading…",

@@ -18,6 +18,15 @@ const visioOneHash = import.meta.env.VITE_VISIOONE_HASH
 const visioOneBaseURL = import.meta.env.VITE_VISIOONE_BASE_URL
 const visioOneAuthToken = import.meta.env.VITE_VISIOONE_AUTH_TOKEN
 
+// The custom-data feature needs a map that actually has CustomData
+// published — the shared demo map pointed at by VITE_VISIOONE_HASH has
+// none, whatever a given developer's local .env happens to be set to. So,
+// only for this one screen, override the hash with a dedicated map known
+// (confirmed live) to carry real CustomData — see docs/features/custom-data.md.
+// Every other slug keeps using visioOneHash exactly as before.
+const CUSTOM_DATA_MAP_HASH = 'kd9426d8cb3f1c532f22b5bcbd325c280bd351feb'
+const mapHash = computed(() => (props.slug === 'custom-data' ? CUSTOM_DATA_MAP_HASH : visioOneHash))
+
 // shallowRef, not ref: `venue`/`view` are VisioOne SDK class instances. A
 // deep ref() would wrap every nested object (POIs, Surfaces, Floors...) in a
 // Vue reactive Proxy, and the SDK checks object identity internally — a
@@ -521,6 +530,16 @@ const customDataNotFound = ref(false)
 // template tell "nothing attempted" from "attempted, found nothing".
 const customDataEntries = ref(null)
 
+// POI ids confirmed (live, against CUSTOM_DATA_MAP_HASH) to carry real,
+// non-empty CustomData — offered as one-tap shortcuts so the feature shows
+// actual key/value pairs without hunting for a valid id first.
+const CUSTOM_DATA_SAMPLE_POI_IDS = ['B1', 'B3-UL00-ID0065', 'B3-UL00-ID0064']
+
+function loadCustomDataSample(id) {
+  customDataPlaceId.value = id
+  loadCustomData()
+}
+
 async function loadCustomData() {
   const venue = venueRef.value
   if (!venue) return
@@ -571,7 +590,7 @@ function clearCustomData() {
 <template>
   <main class="feature">
     <VisioOneMap
-      :hash="visioOneHash"
+      :hash="mapHash"
       :base-url="visioOneBaseURL"
       :authorization-token="visioOneAuthToken"
       @ready="handleReady"
@@ -828,6 +847,19 @@ function clearCustomData() {
       </div>
 
       <div v-else-if="props.slug === 'custom-data'" class="goto-poi-panel">
+        <div class="custom-data-panel__samples">
+          <span class="custom-data-panel__samples-label">{{ t('features.customData.samplesLabel') }}</span>
+          <button
+            v-for="sampleId in CUSTOM_DATA_SAMPLE_POI_IDS"
+            :key="sampleId"
+            type="button"
+            class="custom-data-panel__chip"
+            :disabled="customDataLoading"
+            @click="loadCustomDataSample(sampleId)"
+          >
+            {{ sampleId }}
+          </button>
+        </div>
         <input
           v-model="customDataPlaceId"
           class="goto-poi-panel__input"
@@ -1033,6 +1065,35 @@ function clearCustomData() {
 }
 
 .goto-poi-panel__button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.custom-data-panel__samples {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.custom-data-panel__samples-label {
+  font-size: 0.85em;
+  opacity: 0.7;
+  margin-right: 2px;
+}
+
+.custom-data-panel__chip {
+  border-radius: 999px;
+  border: 1px solid #057dbc;
+  padding: 4px 10px;
+  background: transparent;
+  color: #fff;
+  font-size: 0.85em;
+  cursor: pointer;
+}
+
+.custom-data-panel__chip:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }

@@ -92,6 +92,7 @@
     "customData": {
       "title": "Données personnalisées",
       "description": "Lire des données métier (prix, horaires, référence) attachées à un POI dans VisioMapEditor.",
+      "samplesLabel": "Essayer :",
       "placeholder": "ID du lieu",
       "load": "Charger",
       "loading": "Chargement…",
