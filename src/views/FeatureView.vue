@@ -533,7 +533,17 @@ async function loadCustomData() {
   customDataEntries.value = null
 
   try {
-    await venue.refreshCustomData()
+    // refreshCustomData() rejects (rather than resolving) when the venue has
+    // no CustomData published yet — e.g. a 404 on its customData.json,
+    // confirmed against the shared demo map. That's a normal "nothing to
+    // load yet" outcome, not a real failure, so it's swallowed here and the
+    // lookup proceeds against whatever the (possibly still-empty) cache
+    // holds — see docs/features/custom-data.md.
+    try {
+      await venue.refreshCustomData()
+    } catch (error) {
+      console.warn('refreshCustomData failed (likely no CustomData published for this venue):', error)
+    }
 
     const poi = venue.pois.find((p) => p.id === targetId)
     if (!poi) {
