@@ -80,6 +80,14 @@
       "description": "Recenter and lock the camera onto a simulated tracked position, GPS-app style.",
       "panelTitle": "Camera lock on position",
       "toggleLabel": "Recenter camera on position"
+    },
+    "clickableSurface": {
+      "title": "Clickable surface",
+      "description": "Make a place's surface interactive so the SDK handles its hover/tap color itself.",
+      "placeholder": "Place ID",
+      "enable": "Enable",
+      "disable": "Disable",
+      "notFound": "No POI found with this ID."
     }
   }
 }

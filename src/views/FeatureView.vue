@@ -453,6 +453,57 @@ function toggleCameraLock() {
   lockCameraOnPosition.value = !lockCameraOnPosition.value
   view.lockCameraPositionOnTracking = lockCameraOnPosition.value
 }
+
+// Clickable surface: venue.updateSurface(surface, { isInteractive: true, ... })
+// makes a POI's surface(s) SDK-managed clickable — once set, the SDK itself
+// swaps the surface's displayed color on hover/tap using hoverColor/
+// selectionColor below, with zero click-handling code on this side for the
+// coloring itself. Base building block for any "availability" use case (a
+// free/occupied room, a parking spot). See docs/features/clickable-surface.md.
+const clickableSurfacePlaceId = ref('')
+const clickableSurfaceEnabled = ref(false)
+const clickableSurfaceNotFound = ref(false)
+// The POI actually toggled — captured at Enable, not re-read from the input
+// on Disable, same pattern as simulatingPlaceId/highlightedPoi above.
+let clickableSurfacePoi = null
+
+function setClickableSurfaceInteractive(poi, interactive) {
+  const venue = venueRef.value
+  if (!venue) return
+  poi.surfaces.forEach((surface) =>
+    venue.updateSurface(
+      surface,
+      interactive
+        ? { isInteractive: true, color: '#2ECC71', hoverColor: '#F1C40F', selectionColor: '#E74C3C' }
+        : { isInteractive: false, color: 'initial' },
+    ),
+  )
+}
+
+function enableClickableSurface() {
+  const venue = venueRef.value
+  if (!venue) return
+
+  const targetId = clickableSurfacePlaceId.value.trim()
+  if (!targetId) return
+
+  const poi = venue.pois.find((p) => p.id === targetId)
+  if (!poi) {
+    clickableSurfaceNotFound.value = true
+    return
+  }
+  clickableSurfaceNotFound.value = false
+
+  clickableSurfacePoi = poi
+  setClickableSurfaceInteractive(poi, true)
+  clickableSurfaceEnabled.value = true
+}
+
+function disableClickableSurface() {
+  if (clickableSurfacePoi) setClickableSurfaceInteractive(clickableSurfacePoi, false)
+  clickableSurfacePoi = null
+  clickableSurfaceEnabled.value = false
+}
 </script>
 
 <template>
@@ -487,7 +538,8 @@ function toggleCameraLock() {
         props.slug === 'compute-navigation' ||
         props.slug === 'ui-part-visibility' ||
         props.slug === 'simulated-position' ||
-        props.slug === 'camera-lock-on-position'
+        props.slug === 'camera-lock-on-position' ||
+        props.slug === 'clickable-surface'
       "
       class="fab"
       :aria-label="t('home.openControls')"
@@ -690,6 +742,26 @@ function toggleCameraLock() {
             @change="toggleCameraLock"
           />
         </label>
+      </div>
+
+      <div v-else-if="props.slug === 'clickable-surface'" class="goto-poi-panel">
+        <input
+          v-model="clickableSurfacePlaceId"
+          class="goto-poi-panel__input"
+          :placeholder="t('features.clickableSurface.placeholder')"
+          @keyup.enter="enableClickableSurface"
+        />
+        <div class="goto-poi-panel__actions">
+          <button class="goto-poi-panel__button" @click="enableClickableSurface">
+            {{ t('features.clickableSurface.enable') }}
+          </button>
+          <button class="goto-poi-panel__button goto-poi-panel__button--secondary" @click="disableClickableSurface">
+            {{ t('features.clickableSurface.disable') }}
+          </button>
+        </div>
+        <div v-if="clickableSurfaceNotFound" class="goto-poi-panel__error">
+          {{ t('features.clickableSurface.notFound') }}
+        </div>
       </div>
     </BottomSheet>
   </main>

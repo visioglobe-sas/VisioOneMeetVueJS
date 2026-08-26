@@ -80,6 +80,14 @@
       "description": "Recentre et verrouille la caméra sur une position simulée suivie, à la manière d'une app GPS.",
       "panelTitle": "Verrouillage caméra sur la position",
       "toggleLabel": "Recentrer la caméra sur la position"
+    },
+    "clickableSurface": {
+      "title": "Surface cliquable",
+      "description": "Rend la surface d'un lieu interactive pour que le SDK gère lui-même sa couleur au survol/tap.",
+      "placeholder": "ID du lieu",
+      "enable": "Activer",
+      "disable": "Désactiver",
+      "notFound": "Aucun POI trouvé avec cet ID."
     }
   }
 }
