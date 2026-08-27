@@ -41,6 +41,16 @@
       "buildingLabel": "Bâtiment",
       "currentBadge": "Actuel"
     },
+    "exploreMode": {
+      "title": "Mode d'exploration",
+      "description": "Basculez entre vue globale, carousel éclaté par bâtiment et vue d'un seul étage.",
+      "panelTitle": "Mode d'exploration",
+      "modes": {
+        "global": "Global",
+        "building": "Bâtiment",
+        "floor": "Étage"
+      }
+    },
     "computeNavigation": {
       "title": "Itinéraire",
       "description": "Calcule et affiche un itinéraire entre deux ID de lieu.",
