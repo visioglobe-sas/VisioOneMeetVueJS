@@ -60,4 +60,9 @@ export const features = [
     titleKey: 'features.dynamicPoiCrud.title',
     descriptionKey: 'features.dynamicPoiCrud.description',
   },
+  {
+    slug: 'runtime-locale',
+    titleKey: 'features.runtimeLocale.title',
+    descriptionKey: 'features.runtimeLocale.description',
+  },
 ]

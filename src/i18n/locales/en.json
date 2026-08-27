@@ -123,6 +123,16 @@
       "alreadyExists": "A POI with this ID already exists in the venue.",
       "anchorNotFound": "No POI found with this anchor ID.",
       "anchorNoPosition": "This POI has no position to copy (no label or marker)."
+    },
+    "runtimeLocale": {
+      "title": "Runtime locale",
+      "description": "Switch the map's displayed language on the fly, no reload needed.",
+      "panelTitle": "Language",
+      "locales": {
+        "en": "English",
+        "fr": "Français"
+      },
+      "currentBadge": "Current"
     }
   }
 }

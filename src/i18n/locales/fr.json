@@ -123,6 +123,16 @@
       "alreadyExists": "Un POI avec cet ID existe déjà dans le lieu.",
       "anchorNotFound": "Aucun POI trouvé avec cet ID d'ancrage.",
       "anchorNoPosition": "Ce POI n'a aucune position à copier (pas de label ni de marker)."
+    },
+    "runtimeLocale": {
+      "title": "Langue à la volée",
+      "description": "Change la langue affichée sur la carte instantanément, sans rechargement.",
+      "panelTitle": "Langue",
+      "locales": {
+        "en": "English",
+        "fr": "Français"
+      },
+      "currentBadge": "Actuelle"
     }
   }
 }
