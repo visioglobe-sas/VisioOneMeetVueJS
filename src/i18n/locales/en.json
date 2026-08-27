@@ -41,6 +41,16 @@
       "buildingLabel": "Building",
       "currentBadge": "Current"
     },
+    "exploreMode": {
+      "title": "Explore mode",
+      "description": "Switch between global, exploded building carousel, and single-floor views.",
+      "panelTitle": "Explore mode",
+      "modes": {
+        "global": "Global",
+        "building": "Building",
+        "floor": "Floor"
+      }
+    },
     "computeNavigation": {
       "title": "Itinerary",
       "description": "Compute and display a route between two place IDs.",

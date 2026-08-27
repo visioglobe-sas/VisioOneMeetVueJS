@@ -45,6 +45,7 @@ function handleReady({ venue, view }) {
   console.log('VisioOne venue loaded:', venue)
   console.log('VisioOne view created:', view)
   if (props.slug === 'floor-selector') initFloorSelector()
+  if (props.slug === 'explore-mode') initExploreMode()
   if (props.slug === 'runtime-locale') initRuntimeLocale()
   if (props.slug === 'native-ui-replacement') initNativeUiReplacement()
 }
@@ -140,6 +141,7 @@ onBeforeUnmount(() => {
   // camera lock engaged for whatever destroys/recreates the view next.
   resetCameraLock()
   viewRef.value?.removeEventListener('currentfloorchanged', handleCurrentFloorChanged)
+  viewRef.value?.removeEventListener('exploremodechanged', handleExploreModeChanged)
 })
 
 // Dedicated Place ID field + Go/Clear buttons — deliberately not wired to
@@ -245,6 +247,46 @@ function selectFloor(floor) {
   const view = viewRef.value
   if (!view || floor.id === currentFloorId.value) return
   view.goToFloor(floor)
+}
+
+// Explore mode: drives the SDK's 3 building-exploration modes via the
+// settable view.currentExploreMode property ('global' | 'building' |
+// 'floor'). 'building' is the flagship "wahou" visual — opened buildings'
+// floors shown as an exploded carousel — but it only has anything to show
+// once a building is actually open (view.currentBuilding defined). So,
+// same idiom as floor-selector's currentfloorchanged sync, this panel's
+// active button is kept correct via the 'exploremodechanged' event, which
+// also fires the SDK's own auto-transition out of "building" mode on a
+// map click (SDK switches to "floor" on its own). See
+// docs/features/explore-mode.md.
+const EXPLORE_MODES = ['global', 'building', 'floor']
+const currentExploreMode = ref(null)
+
+function handleExploreModeChanged(event) {
+  currentExploreMode.value = event.currentExploreMode
+}
+
+function initExploreMode() {
+  const view = viewRef.value
+  if (!view) return
+  currentExploreMode.value = view.currentExploreMode
+  view.addEventListener('exploremodechanged', handleExploreModeChanged)
+}
+
+async function selectExploreMode(mode) {
+  const view = viewRef.value
+  const venue = venueRef.value
+  if (!view || mode === currentExploreMode.value) return
+
+  // "building" mode has nothing to show if no building is open yet — open
+  // the first one so the carousel effect is always one tap away, rather
+  // than requiring the visitor to first navigate into a building manually.
+  if (mode === 'building' && !view.currentBuilding) {
+    const firstBuilding = venue?.venueLayout.buildings[0]
+    if (firstBuilding) await view.goToBuilding(firstBuilding)
+  }
+
+  view.currentExploreMode = mode
 }
 
 // Itinerary between two Place IDs, via venue.computeNavigation() + a
@@ -853,6 +895,7 @@ function toggleSdkFloorSelector() {
         props.slug === 'occupancy-simulated' ||
         props.slug === 'goto-poi' ||
         props.slug === 'floor-selector' ||
+        props.slug === 'explore-mode' ||
         props.slug === 'compute-navigation' ||
         props.slug === 'ui-part-visibility' ||
         props.slug === 'simulated-position' ||
@@ -949,6 +992,22 @@ function toggleSdkFloorSelector() {
             <span v-if="floor.id === currentFloorId" class="floor-panel__floor-badge">
               {{ t('features.floorSelector.currentBadge') }}
             </span>
+          </button>
+        </div>
+      </div>
+
+      <div v-else-if="props.slug === 'explore-mode'" class="explore-mode-panel">
+        <h2 class="explore-mode-panel__title">{{ t('features.exploreMode.panelTitle') }}</h2>
+        <div class="explore-mode-panel__segmented">
+          <button
+            v-for="mode in EXPLORE_MODES"
+            :key="mode"
+            type="button"
+            class="explore-mode-panel__option"
+            :class="{ 'explore-mode-panel__option--active': mode === currentExploreMode }"
+            @click="selectExploreMode(mode)"
+          >
+            {{ t(`features.exploreMode.modes.${mode}`) }}
           </button>
         </div>
       </div>
@@ -1577,6 +1636,31 @@ function toggleSdkFloorSelector() {
   font-weight: 600;
   text-transform: uppercase;
   opacity: 0.85;
+}
+
+.explore-mode-panel__title {
+  margin: 0 0 12px;
+  font-size: 1.1em;
+}
+
+.explore-mode-panel__segmented {
+  display: flex;
+  gap: 8px;
+}
+
+.explore-mode-panel__option {
+  flex: 1;
+  border-radius: 6px;
+  border: none;
+  padding: 12px 10px;
+  background: #222;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.explore-mode-panel__option--active {
+  background: #057dbc;
 }
 
 .itinerary-panel__title {

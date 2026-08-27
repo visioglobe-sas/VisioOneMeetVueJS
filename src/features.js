@@ -21,6 +21,11 @@ export const features = [
     descriptionKey: 'features.floorSelector.description',
   },
   {
+    slug: 'explore-mode',
+    titleKey: 'features.exploreMode.title',
+    descriptionKey: 'features.exploreMode.description',
+  },
+  {
     slug: 'compute-navigation',
     titleKey: 'features.computeNavigation.title',
     descriptionKey: 'features.computeNavigation.description',

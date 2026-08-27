@@ -24,6 +24,7 @@ Each feature below is a self-contained example screen. The bullet links go to a 
 - [React to a POI Click](docs/features/poi-click.md) — read the `poiclick` event payload and display details for the tapped POI(s).
 - [Go To POI](docs/features/goto-poi.md) — look up a POI by ID and center/zoom the camera on it with `view.goToPOI()`.
 - [Floor / Building Selector](docs/features/floor-selector.md) — build a custom floor/building switcher on top of `venue.venueLayout` and `view.goToFloor()`/`view.goToBuilding()`.
+- [Explore Mode](docs/features/explore-mode.md) — switch between global, exploded building "carousel", and single-floor views with `view.currentExploreMode`.
 - [Compute Navigation](docs/features/compute-navigation.md) — compute and display a route between two places with `venue.computeNavigation()`.
 - [UI Part Visibility](docs/features/ui-part-visibility.md) — show/hide the SDK's default on-map widgets individually with `view.setUIPartVisible()`.
 - [Simulated Position](docs/features/simulated-position.md) — animate a tracked position between two POIs with `view.injectTrackedPosition()`.
