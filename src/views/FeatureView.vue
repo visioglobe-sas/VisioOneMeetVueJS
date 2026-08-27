@@ -45,6 +45,7 @@ function handleReady({ venue, view }) {
   console.log('VisioOne venue loaded:', venue)
   console.log('VisioOne view created:', view)
   if (props.slug === 'floor-selector') initFloorSelector()
+  if (props.slug === 'runtime-locale') initRuntimeLocale()
 }
 
 function resetView() {
@@ -750,6 +751,49 @@ function removeDynamicPoi() {
   trackedLabelText.value = ''
   dynamicPoiErrorKey.value = ''
 }
+
+// Runtime locale: venue.currentLocale (readonly) reflects the venue's
+// currently displayed language for POI/label text and the current UI/
+// Navigation; venue.setCurrentLocale(locale) changes it and returns a
+// Promise — per its own TSDoc the SDK re-renders everything itself once it
+// resolves, so there is nothing to manually re-fetch here. `currentLocale`
+// isn't a Vue ref on the SDK side, so its value is mirrored into
+// `currentLocaleId` on load (initRuntimeLocale, called from handleReady) and
+// after every switch, same split as trackedPoiId/highlightedPoi above. See
+// docs/features/runtime-locale.md.
+//
+// This demo only offers the two locales below, not the full
+// venue.translator.allLocales list: on the shared demo map that list is
+// ['default', 'en', 'fr'], and 'default' is a byte-identical duplicate of
+// 'fr' (both French) — confirmed against the published map payload — so
+// presenting it as a third option would just be a second, indistinguishable
+// "French".
+const RUNTIME_LOCALES = ['en', 'fr']
+const currentLocaleId = ref(null)
+const switchingLocale = ref(false)
+
+function initRuntimeLocale() {
+  const venue = venueRef.value
+  if (!venue) return
+  currentLocaleId.value = venue.currentLocale
+}
+
+// 'default' == 'fr' content-wise on this demo map (see above) — treated as
+// "fr is active" here so the panel still highlights a choice on first load
+// instead of leaving both options unmarked.
+const activeLocaleId = computed(() => (currentLocaleId.value === 'default' ? 'fr' : currentLocaleId.value))
+
+async function selectLocale(localeId) {
+  const venue = venueRef.value
+  if (!venue || switchingLocale.value || localeId === activeLocaleId.value) return
+  switchingLocale.value = true
+  try {
+    await venue.setCurrentLocale(localeId)
+    currentLocaleId.value = venue.currentLocale
+  } finally {
+    switchingLocale.value = false
+  }
+}
 </script>
 
 <template>
@@ -788,7 +832,8 @@ function removeDynamicPoi() {
         props.slug === 'clickable-surface' ||
         props.slug === 'custom-data' ||
         props.slug === 'category-highlight' ||
-        props.slug === 'dynamic-poi-crud'
+        props.slug === 'dynamic-poi-crud' ||
+        props.slug === 'runtime-locale'
       "
       class="fab"
       :aria-label="t('home.openControls')"
@@ -1126,6 +1171,26 @@ function removeDynamicPoi() {
           {{ t('features.dynamicPoiCrud.none') }}
         </div>
       </div>
+
+      <div v-else-if="props.slug === 'runtime-locale'" class="floor-panel">
+        <h2 class="floor-panel__title">{{ t('features.runtimeLocale.panelTitle') }}</h2>
+        <div class="floor-panel__floors">
+          <button
+            v-for="locale in RUNTIME_LOCALES"
+            :key="locale"
+            type="button"
+            class="floor-panel__floor-button"
+            :class="{ 'floor-panel__floor-button--active': locale === activeLocaleId }"
+            :disabled="switchingLocale"
+            @click="selectLocale(locale)"
+          >
+            <span class="floor-panel__floor-id">{{ t(`features.runtimeLocale.locales.${locale}`) }}</span>
+            <span v-if="locale === activeLocaleId" class="floor-panel__floor-badge">
+              {{ t('features.runtimeLocale.currentBadge') }}
+            </span>
+          </button>
+        </div>
+      </div>
     </BottomSheet>
   </main>
 </template>
@@ -1429,6 +1494,11 @@ function removeDynamicPoi() {
 
 .floor-panel__floor-button--active {
   background: #057dbc;
+}
+
+.floor-panel__floor-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .floor-panel__floor-badge {

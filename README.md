@@ -32,6 +32,7 @@ Each feature below is a self-contained example screen. The bullet links go to a 
 - [Custom Data](docs/features/custom-data.md) — read business key/value data (price, hours, reference) attached to a POI via `venue.getPOICustomData()`.
 - [Category Highlight](docs/features/category-highlight.md) — highlight every POI in a chosen category at once by combining `venue.categories`, `poi.categories`, and `venue.updateSurface()`.
 - [Dynamic POI CRUD](docs/features/dynamic-poi-crud.md) — create, update and remove a POI at runtime with `venue.createPOI()`/`venue.updateLabel()`/`venue.removePOI()`, without republishing the map.
+- [Runtime Locale](docs/features/runtime-locale.md) — switch the map's displayed language at runtime with `venue.setCurrentLocale()`, no reload or republish needed.
 
 ## Structure
 
