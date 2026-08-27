@@ -133,6 +133,12 @@
         "fr": "Français"
       },
       "currentBadge": "Current"
+    },
+    "nativeUiReplacement": {
+      "title": "Native UI replacement",
+      "description": "Hide the SDK's own floor selector and drive floors entirely from the app's native control.",
+      "panelTitle": "Floors",
+      "toggleLabel": "Show SDK's own floor selector"
     }
   }
 }

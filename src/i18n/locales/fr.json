@@ -133,6 +133,12 @@
         "fr": "Français"
       },
       "currentBadge": "Actuelle"
+    },
+    "nativeUiReplacement": {
+      "title": "Remplacement d'UI native",
+      "description": "Masque le sélecteur d'étage du SDK et pilote les étages entièrement depuis le contrôle natif de l'app.",
+      "panelTitle": "Étages",
+      "toggleLabel": "Afficher le sélecteur d'étage du SDK"
     }
   }
 }

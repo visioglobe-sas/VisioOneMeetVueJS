@@ -46,6 +46,7 @@ function handleReady({ venue, view }) {
   console.log('VisioOne view created:', view)
   if (props.slug === 'floor-selector') initFloorSelector()
   if (props.slug === 'runtime-locale') initRuntimeLocale()
+  if (props.slug === 'native-ui-replacement') initNativeUiReplacement()
 }
 
 function resetView() {
@@ -794,6 +795,33 @@ async function selectLocale(localeId) {
     switchingLocale.value = false
   }
 }
+
+// Native UI replacement: reuses floor-selector's own native picker
+// (buildings/floors/selectedBuildingId/currentFloorId/selectBuilding/
+// selectFloor/initFloorSelector above — same functions, not a copy) as the
+// app's white-label replacement for the SDK's own floor-selector widget.
+// view.setUIPartVisible('floorSelector', false) hides that SDK widget on
+// load — the app's native picker is the only floor control visible/
+// functional by default. The toggle below flips the SDK widget back on
+// (default OFF) purely so a visitor can see both driving the same floor
+// state live; it never affects the app's own picker, which stays wired to
+// view.goToFloor()/view.goToBuilding() regardless of this toggle. See
+// docs/features/native-ui-replacement.md.
+const sdkFloorSelectorVisible = ref(false)
+
+function initNativeUiReplacement() {
+  const view = viewRef.value
+  if (!view) return
+  initFloorSelector()
+  view.setUIPartVisible('floorSelector', sdkFloorSelectorVisible.value)
+}
+
+function toggleSdkFloorSelector() {
+  const view = viewRef.value
+  if (!view) return
+  sdkFloorSelectorVisible.value = !sdkFloorSelectorVisible.value
+  view.setUIPartVisible('floorSelector', sdkFloorSelectorVisible.value)
+}
 </script>
 
 <template>
@@ -833,7 +861,8 @@ async function selectLocale(localeId) {
         props.slug === 'custom-data' ||
         props.slug === 'category-highlight' ||
         props.slug === 'dynamic-poi-crud' ||
-        props.slug === 'runtime-locale'
+        props.slug === 'runtime-locale' ||
+        props.slug === 'native-ui-replacement'
       "
       class="fab"
       :aria-label="t('home.openControls')"
@@ -1190,6 +1219,48 @@ async function selectLocale(localeId) {
             </span>
           </button>
         </div>
+      </div>
+
+      <div v-else-if="props.slug === 'native-ui-replacement'" class="floor-panel">
+        <h2 class="floor-panel__title">{{ t('features.nativeUiReplacement.panelTitle') }}</h2>
+
+        <div v-if="buildings.length > 1" class="floor-panel__buildings">
+          <span class="floor-panel__buildings-label">{{ t('features.floorSelector.buildingLabel') }}</span>
+          <button
+            v-for="building in buildings"
+            :key="building.id"
+            class="floor-panel__building-button"
+            :class="{ 'floor-panel__building-button--active': building.id === selectedBuildingId }"
+            @click="selectBuilding(building)"
+          >
+            {{ building.id }}
+          </button>
+        </div>
+
+        <div class="floor-panel__floors">
+          <button
+            v-for="floor in floorsForSelectedBuilding"
+            :key="floor.id"
+            class="floor-panel__floor-button"
+            :class="{ 'floor-panel__floor-button--active': floor.id === currentFloorId }"
+            @click="selectFloor(floor)"
+          >
+            <span class="floor-panel__floor-id">{{ floor.id }}</span>
+            <span v-if="floor.id === currentFloorId" class="floor-panel__floor-badge">
+              {{ t('features.floorSelector.currentBadge') }}
+            </span>
+          </button>
+        </div>
+
+        <label class="ui-part-panel__row camera-lock-panel__row">
+          <span class="ui-part-panel__label">{{ t('features.nativeUiReplacement.toggleLabel') }}</span>
+          <input
+            type="checkbox"
+            class="ui-part-panel__switch"
+            :checked="sdkFloorSelectorVisible"
+            @change="toggleSdkFloorSelector"
+          />
+        </label>
       </div>
     </BottomSheet>
   </main>
