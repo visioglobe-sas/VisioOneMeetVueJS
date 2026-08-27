@@ -65,4 +65,9 @@ export const features = [
     titleKey: 'features.runtimeLocale.title',
     descriptionKey: 'features.runtimeLocale.description',
   },
+  {
+    slug: 'native-ui-replacement',
+    titleKey: 'features.nativeUiReplacement.title',
+    descriptionKey: 'features.nativeUiReplacement.description',
+  },
 ]
