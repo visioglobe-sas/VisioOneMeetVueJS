@@ -29,6 +29,7 @@ Each feature below is a self-contained example screen. The bullet links go to a 
 - [UI Part Visibility](docs/features/ui-part-visibility.md) — show/hide the SDK's default on-map widgets individually with `view.setUIPartVisible()`.
 - [Simulated Position](docs/features/simulated-position.md) — animate a tracked position between two POIs with `view.injectTrackedPosition()`.
 - [Camera Lock on Position](docs/features/camera-lock-on-position.md) — lock the camera's focus onto the currently tracked position via `view.lockCameraPositionOnTracking`.
+- [Geofencing](docs/features/geofencing.md) — recolor a POI's surface when a tracked position enters/exits it, checking containment against `surface.positions`.
 - [Clickable Surface](docs/features/clickable-surface.md) — make a POI's surface interactive so the SDK swaps its color on hover/tap via `venue.updateSurface`.
 - [Custom Data](docs/features/custom-data.md) — read business key/value data (price, hours, reference) attached to a POI via `venue.getPOICustomData()`.
 - [Category Highlight](docs/features/category-highlight.md) — highlight every POI in a chosen category at once by combining `venue.categories`, `poi.categories`, and `venue.updateSurface()`.

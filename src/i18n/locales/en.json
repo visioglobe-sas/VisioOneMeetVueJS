@@ -91,6 +91,16 @@
       "panelTitle": "Camera lock on position",
       "toggleLabel": "Recenter camera on position"
     },
+    "geofencing": {
+      "title": "Geofencing",
+      "description": "Trigger a visual alert when a simulated tracked position enters a POI's surface zone.",
+      "panelTitle": "Geofencing",
+      "zonePlaceholder": "Zone POI ID",
+      "zoneNotFound": "No POI found with this ID.",
+      "zoneNoSurface": "This POI has no surface geometry to use as a zone.",
+      "inside": "Inside zone",
+      "outside": "Outside zone"
+    },
     "clickableSurface": {
       "title": "Clickable surface",
       "description": "Make a place's surface interactive so the SDK handles its hover/tap color itself.",
