@@ -149,6 +149,15 @@
       "description": "Hide the SDK's own floor selector and drive floors entirely from the app's native control.",
       "panelTitle": "Floors",
       "toggleLabel": "Show SDK's own floor selector"
+    },
+    "addLocale": {
+      "title": "Add locale at runtime",
+      "description": "Register a brand-new language (Spanish) that was never authored in VisioMapEditor, via addLocale().",
+      "panelTitle": "Add Spanish locale",
+      "notAddedYet": "(not added yet)",
+      "addButton": "Add Spanish locale",
+      "switchButton": "Switch to Spanish",
+      "switchedButton": "Switched to Spanish"
     }
   }
 }

@@ -35,6 +35,7 @@ Each feature below is a self-contained example screen. The bullet links go to a 
 - [Dynamic POI CRUD](docs/features/dynamic-poi-crud.md) — create, update and remove a POI at runtime with `venue.createPOI()`/`venue.updateLabel()`/`venue.removePOI()`, without republishing the map.
 - [Runtime Locale](docs/features/runtime-locale.md) — switch the map's displayed language at runtime with `venue.setCurrentLocale()`, no reload or republish needed.
 - [Native UI Replacement](docs/features/native-ui-replacement.md) — hide the SDK's own floor-selector widget with `view.setUIPartVisible()` and rely solely on the app's native floor picker.
+- [Add Locale](docs/features/add-locale.md) — register a brand-new language at runtime, never authored in VisioMapEditor, via `venue.translator.addLocale()`.
 
 ## Structure
 

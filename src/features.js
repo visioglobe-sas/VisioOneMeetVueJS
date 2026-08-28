@@ -75,4 +75,9 @@ export const features = [
     titleKey: 'features.nativeUiReplacement.title',
     descriptionKey: 'features.nativeUiReplacement.description',
   },
+  {
+    slug: 'add-locale',
+    titleKey: 'features.addLocale.title',
+    descriptionKey: 'features.addLocale.description',
+  },
 ]

@@ -864,6 +864,63 @@ function toggleSdkFloorSelector() {
   sdkFloorSelectorVisible.value = !sdkFloorSelectorVisible.value
   view.setUIPartVisible('floorSelector', sdkFloorSelectorVisible.value)
 }
+
+// Add locale: venue.translator.addLocale(locale, resources) registers a
+// brand-new locale at runtime — one never authored for this map in
+// VisioMapEditor — backed by a generic i18next resource bundle that is
+// entirely separate from the venue's own POI/floor/building/category
+// translation data (parsed once at load from the published map's own JSON,
+// exposed via translatePOI/translateFloor/etc.). It can therefore never make
+// a POI/label name appear translated; it only affects (a) the SDK's own
+// predefined UI/Navigation strings, if a key from that list is included, and
+// (b) any other, app-defined key — a fully generic key/value store. See
+// docs/features/add-locale.md.
+//
+// One predefined SDK UI key ('search-for-anything') plus one custom,
+// app-only key ('welcome-message', meaningless to the SDK itself) are added
+// together to demonstrate both uses in the same call.
+const ADD_LOCALE_ID = 'es'
+const ADD_LOCALE_RESOURCES = {
+  'search-for-anything': 'Buscar cualquier cosa',
+  'welcome-message': 'Bienvenido al mapa',
+}
+const ADD_LOCALE_KEYS = Object.keys(ADD_LOCALE_RESOURCES)
+
+const localeAdded = ref(false)
+// key -> value read back via translator.translate() right after addLocale —
+// this readback, not the SDK's own visible UI, is the primary proof the
+// round trip worked.
+const addLocaleTranslations = ref({})
+const switchingToSpanish = ref(false)
+const switchedToSpanish = ref(false)
+
+function addSpanishLocale() {
+  const venue = venueRef.value
+  if (!venue || localeAdded.value) return
+
+  venue.translator.addLocale(ADD_LOCALE_ID, ADD_LOCALE_RESOURCES)
+  addLocaleTranslations.value = Object.fromEntries(
+    ADD_LOCALE_KEYS.map((key) => [key, venue.translator.translate(key, ADD_LOCALE_ID)]),
+  )
+  localeAdded.value = true
+}
+
+// Secondary, optional proof: reuses runtime-locale's exact
+// venue.setCurrentLocale() call so that, if any of the SDK's own default UI
+// parts are visible, they pick up the newly-added 'es' strings live too. POI/
+// label names would NOT change — this map only has default/en/fr authored,
+// see docs/features/runtime-locale.md.
+async function switchToSpanish() {
+  const venue = venueRef.value
+  if (!venue || !localeAdded.value || switchingToSpanish.value) return
+  switchingToSpanish.value = true
+  try {
+    await venue.setCurrentLocale(ADD_LOCALE_ID)
+    switchedToSpanish.value = true
+  } finally {
+    switchingToSpanish.value = false
+  }
+}
 </script>
 
 <template>
@@ -905,7 +962,8 @@ function toggleSdkFloorSelector() {
         props.slug === 'category-highlight' ||
         props.slug === 'dynamic-poi-crud' ||
         props.slug === 'runtime-locale' ||
-        props.slug === 'native-ui-replacement'
+        props.slug === 'native-ui-replacement' ||
+        props.slug === 'add-locale'
       "
       class="fab"
       :aria-label="t('home.openControls')"
@@ -1320,6 +1378,30 @@ function toggleSdkFloorSelector() {
             @change="toggleSdkFloorSelector"
           />
         </label>
+      </div>
+
+      <div v-else-if="props.slug === 'add-locale'" class="add-locale-panel">
+        <h2 class="floor-panel__title">{{ t('features.addLocale.panelTitle') }}</h2>
+        <div class="custom-data-panel__list">
+          <div v-for="key in ADD_LOCALE_KEYS" :key="key" class="custom-data-panel__entry">
+            <span class="custom-data-panel__key">{{ key }}</span>
+            <span class="custom-data-panel__value">
+              {{ localeAdded ? addLocaleTranslations[key] : t('features.addLocale.notAddedYet') }}
+            </span>
+          </div>
+        </div>
+        <div class="goto-poi-panel__actions add-locale-panel__actions">
+          <button class="goto-poi-panel__button" :disabled="localeAdded" @click="addSpanishLocale">
+            {{ t('features.addLocale.addButton') }}
+          </button>
+          <button
+            class="goto-poi-panel__button goto-poi-panel__button--secondary"
+            :disabled="!localeAdded || switchingToSpanish"
+            @click="switchToSpanish"
+          >
+            {{ switchedToSpanish ? t('features.addLocale.switchedButton') : t('features.addLocale.switchButton') }}
+          </button>
+        </div>
       </div>
     </BottomSheet>
   </main>
@@ -1856,5 +1938,9 @@ function toggleSdkFloorSelector() {
 
 .category-panel__clear {
   width: 100%;
+}
+
+.add-locale-panel__actions {
+  margin-top: 14px;
 }
 </style>
