@@ -454,12 +454,16 @@ function injectSimulatedPositionTick() {
   const view = viewRef.value
   if (!view || !positionOrigin || !positionDestination) return
 
+  const position = lerpPosition(positionOrigin, positionDestination, positionProgress)
   view.injectTrackedPosition({
-    position: lerpPosition(positionOrigin, positionDestination, positionProgress),
+    position,
     // Re-read live on every tick: moving the slider while the simulation
     // runs changes the radius on the next tick, no restart needed.
     precisionCircleRadius: accuracyRadius.value,
   })
+  // No-op unless a geofencing zone is active (geofenceZoneSurfaces is only
+  // ever set by startGeofencing) — see below.
+  checkGeofence(position)
 
   positionProgress += POSITION_STEP * positionDirection
   if (positionProgress >= 1) {
@@ -505,6 +509,99 @@ function toggleCameraLock() {
   if (!view) return
   lockCameraOnPosition.value = !lockCameraOnPosition.value
   view.lockCameraPositionOnTracking = lockCameraOnPosition.value
+}
+
+// Geofencing: reuses the tracked-position simulation above (Origin/
+// Destination POI ID + Start/Stop) and layers a "Zone POI ID" on top. The SDK
+// has no point-in-polygon/geofence primitive of its own — a POI's
+// surfaces[].positions (its boundary, WGS84 vertices, same coordinate space
+// injectTrackedPosition expects) is public, so containment is computed here
+// with a plain ray-casting test, piggybacked onto the existing simulation
+// tick (there's no trackedpositionchanged event to listen to instead).
+// Entering the zone recolors its surface(s) via venue.updateSurface(), same
+// call as clickable-surface/category-highlight; leaving reverts it. See
+// docs/features/geofencing.md.
+const GEOFENCE_ALERT_COLOR = '#E74C3C'
+const zonePoiId = ref('')
+const geofenceZoneNotFound = ref(false)
+const geofenceNoSurface = ref(false)
+const insideGeofence = ref(false)
+// The zone POI's surfaces actually recolored — captured at Start, not
+// re-read from the input on Stop, same pattern as clickableSurfacePoi above.
+let geofenceZoneSurfaces = null
+
+function pointInPolygon(point, positions) {
+  // Ray-casting, longitude/latitude treated as planar x/y — accurate enough
+  // at building scale, no map projection needed.
+  let inside = false
+  for (let i = 0, j = positions.length - 1; i < positions.length; j = i++) {
+    const xi = positions[i].longitude
+    const yi = positions[i].latitude
+    const xj = positions[j].longitude
+    const yj = positions[j].latitude
+    const intersects =
+      yi > point.latitude !== yj > point.latitude &&
+      point.longitude < ((xj - xi) * (point.latitude - yi)) / (yj - yi) + xi
+    if (intersects) inside = !inside
+  }
+  return inside
+}
+
+function checkGeofence(position) {
+  if (!geofenceZoneSurfaces) return
+  const venue = venueRef.value
+  if (!venue) return
+
+  const isInside = geofenceZoneSurfaces.some((surface) => pointInPolygon(position, surface.positions))
+  if (isInside === insideGeofence.value) return
+  insideGeofence.value = isInside
+  geofenceZoneSurfaces.forEach((surface) =>
+    venue.updateSurface(surface, { color: isInside ? GEOFENCE_ALERT_COLOR : 'initial' }),
+  )
+}
+
+function startGeofencing() {
+  const venue = venueRef.value
+  if (!venue) return
+
+  const targetId = zonePoiId.value.trim()
+  if (!targetId) return
+
+  const poi = venue.pois.find((p) => p.id === targetId)
+  if (!poi) {
+    geofenceZoneNotFound.value = true
+    geofenceNoSurface.value = false
+    return
+  }
+  if (!poi.surfaces || poi.surfaces.length === 0) {
+    geofenceZoneNotFound.value = false
+    geofenceNoSurface.value = true
+    return
+  }
+  geofenceZoneNotFound.value = false
+  geofenceNoSurface.value = false
+  geofenceZoneSurfaces = poi.surfaces
+  insideGeofence.value = false
+
+  startSimulatedPosition()
+}
+
+function stopGeofencing() {
+  stopSimulatedPosition()
+  if (geofenceZoneSurfaces) {
+    const venue = venueRef.value
+    if (venue) geofenceZoneSurfaces.forEach((surface) => venue.updateSurface(surface, { color: 'initial' }))
+  }
+  geofenceZoneSurfaces = null
+  insideGeofence.value = false
+}
+
+function toggleGeofencing() {
+  if (simulatingPosition.value) {
+    stopGeofencing()
+  } else {
+    startGeofencing()
+  }
 }
 
 // Clickable surface: venue.updateSurface(surface, { isInteractive: true, ... })
@@ -957,6 +1054,7 @@ async function switchToSpanish() {
         props.slug === 'ui-part-visibility' ||
         props.slug === 'simulated-position' ||
         props.slug === 'camera-lock-on-position' ||
+        props.slug === 'geofencing' ||
         props.slug === 'clickable-surface' ||
         props.slug === 'custom-data' ||
         props.slug === 'category-highlight' ||
@@ -1182,6 +1280,51 @@ async function switchToSpanish() {
             @change="toggleCameraLock"
           />
         </label>
+      </div>
+
+      <div v-else-if="props.slug === 'geofencing'" class="position-panel">
+        <h2 class="position-panel__title">{{ t('features.geofencing.panelTitle') }}</h2>
+        <input
+          v-model="zonePoiId"
+          class="position-panel__input"
+          :placeholder="t('features.geofencing.zonePlaceholder')"
+        />
+        <input
+          v-model="originPoiId"
+          class="position-panel__input"
+          :placeholder="t('features.simulatedPosition.fromPlaceholder')"
+        />
+        <input
+          v-model="destinationPoiId"
+          class="position-panel__input"
+          :placeholder="t('features.simulatedPosition.toPlaceholder')"
+        />
+        <label class="position-panel__radius">
+          <span>{{ t('features.simulatedPosition.radiusLabel') }}: {{ accuracyRadius }} m</span>
+          <input
+            v-model.number="accuracyRadius"
+            type="range"
+            min="1"
+            max="20"
+            step="1"
+            class="position-panel__slider"
+          />
+        </label>
+        <button class="position-panel__button" @click="toggleGeofencing">
+          {{ simulatingPosition ? t('features.simulatedPosition.stop') : t('features.simulatedPosition.start') }}
+        </button>
+        <div v-if="simulatingPosition" class="position-panel__status">
+          {{ insideGeofence ? t('features.geofencing.inside') : t('features.geofencing.outside') }}
+        </div>
+        <div v-if="geofenceZoneNotFound" class="position-panel__error">
+          {{ t('features.geofencing.zoneNotFound') }}
+        </div>
+        <div v-else-if="geofenceNoSurface" class="position-panel__error">
+          {{ t('features.geofencing.zoneNoSurface') }}
+        </div>
+        <div v-if="positionError" class="position-panel__error">
+          {{ positionError }}
+        </div>
       </div>
 
       <div v-else-if="props.slug === 'clickable-surface'" class="goto-poi-panel">
@@ -1886,6 +2029,12 @@ async function switchToSpanish() {
   margin-top: 10px;
   font-size: 0.9em;
   color: #ff6b6b;
+}
+
+.position-panel__status {
+  margin-top: 10px;
+  font-size: 0.9em;
+  font-weight: 600;
 }
 
 .camera-lock-panel__row {

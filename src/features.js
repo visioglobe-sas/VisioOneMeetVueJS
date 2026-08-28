@@ -46,6 +46,11 @@ export const features = [
     descriptionKey: 'features.cameraLockOnPosition.description',
   },
   {
+    slug: 'geofencing',
+    titleKey: 'features.geofencing.title',
+    descriptionKey: 'features.geofencing.description',
+  },
+  {
     slug: 'clickable-surface',
     titleKey: 'features.clickableSurface.title',
     descriptionKey: 'features.clickableSurface.description',

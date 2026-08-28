@@ -91,6 +91,16 @@
       "panelTitle": "Verrouillage caméra sur la position",
       "toggleLabel": "Recentrer la caméra sur la position"
     },
+    "geofencing": {
+      "title": "Geofencing",
+      "description": "Déclenche une alerte visuelle quand une position simulée entre dans la zone d'un POI.",
+      "panelTitle": "Geofencing",
+      "zonePlaceholder": "ID du POI zone",
+      "zoneNotFound": "Aucun POI trouvé avec cet ID.",
+      "zoneNoSurface": "Ce POI n'a pas de géométrie de surface utilisable comme zone.",
+      "inside": "Dans la zone",
+      "outside": "Hors zone"
+    },
     "clickableSurface": {
       "title": "Surface cliquable",
       "description": "Rend la surface d'un lieu interactive pour que le SDK gère lui-même sa couleur au survol/tap.",
