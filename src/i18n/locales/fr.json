@@ -149,6 +149,15 @@
       "description": "Masque le sélecteur d'étage du SDK et pilote les étages entièrement depuis le contrôle natif de l'app.",
       "panelTitle": "Étages",
       "toggleLabel": "Afficher le sélecteur d'étage du SDK"
+    },
+    "addLocale": {
+      "title": "Ajouter une langue à la volée",
+      "description": "Enregistre une nouvelle langue (espagnol) jamais définie dans VisioMapEditor, via addLocale().",
+      "panelTitle": "Ajouter la langue espagnole",
+      "notAddedYet": "(pas encore ajoutée)",
+      "addButton": "Ajouter la langue espagnole",
+      "switchButton": "Passer en espagnol",
+      "switchedButton": "Basculé en espagnol"
     }
   }
 }
