@@ -168,6 +168,13 @@
       "addButton": "Ajouter la langue espagnole",
       "switchButton": "Passer en espagnol",
       "switchedButton": "Basculé en espagnol"
+    },
+    "customBaseUrl": {
+      "title": "Serveur de carte configurable",
+      "description": "Pointe le SDK vers un autre serveur de cartes que le SaaS Visioglobe par défaut, via baseURL.",
+      "placeholder": "URL de base",
+      "reload": "Recharger",
+      "error": "Échec du chargement de la carte"
     }
   }
 }

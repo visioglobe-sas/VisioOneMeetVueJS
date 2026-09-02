@@ -168,6 +168,13 @@
       "addButton": "Add Spanish locale",
       "switchButton": "Switch to Spanish",
       "switchedButton": "Switched to Spanish"
+    },
+    "customBaseUrl": {
+      "title": "Configurable map server",
+      "description": "Point the SDK at a different map server than Visioglobe's default SaaS, via baseURL.",
+      "placeholder": "Base URL",
+      "reload": "Reload",
+      "error": "Failed to load venue"
     }
   }
 }
