@@ -27,6 +27,28 @@ const visioOneAuthToken = import.meta.env.VITE_VISIOONE_AUTH_TOKEN
 const CUSTOM_DATA_MAP_HASH = 'kd9426d8cb3f1c532f22b5bcbd325c280bd351feb'
 const mapHash = computed(() => (props.slug === 'custom-data' ? CUSTOM_DATA_MAP_HASH : visioOneHash))
 
+// custom-base-url: LoadOptions.baseURL is only read once, inside
+// VisioOneMap's onMounted -- it cannot be changed on an already-loaded
+// venue/view. So "Reload" here doesn't call any SDK setter; it changes
+// `appliedBaseURL`, which is bound to VisioOneMap's :key, forcing Vue to
+// fully unmount (teardown: destroyView + unloadVenue) and remount
+// (loadVenue + createView again) with the new value. See
+// docs/features/custom-base-url.md.
+const CUSTOM_BASE_URL_DEFAULT = 'https://mapserver.visioglobe.com/'
+const baseURLInput = ref(visioOneBaseURL || CUSTOM_BASE_URL_DEFAULT)
+const appliedBaseURL = ref(baseURLInput.value)
+const baseURLError = ref(null)
+
+const effectiveBaseURL = computed(() =>
+  props.slug === 'custom-base-url' ? appliedBaseURL.value : visioOneBaseURL,
+)
+const mapKey = computed(() => (props.slug === 'custom-base-url' ? appliedBaseURL.value : 'default'))
+
+function reloadWithBaseURL() {
+  baseURLError.value = null
+  appliedBaseURL.value = baseURLInput.value.trim()
+}
+
 // shallowRef, not ref: `venue`/`view` are VisioOne SDK class instances. A
 // deep ref() would wrap every nested object (POIs, Surfaces, Floors...) in a
 // Vue reactive Proxy, and the SDK checks object identity internally — a
@@ -44,6 +66,7 @@ function handleReady({ venue, view }) {
   viewRef.value = view
   console.log('VisioOne venue loaded:', venue)
   console.log('VisioOne view created:', view)
+  if (props.slug === 'custom-base-url') baseURLError.value = null
   if (props.slug === 'floor-selector') initFloorSelector()
   if (props.slug === 'explore-mode') initExploreMode()
   if (props.slug === 'runtime-locale') initRuntimeLocale()
@@ -56,6 +79,9 @@ function resetView() {
 
 function handleError(error) {
   console.error('VisioOne error:', error)
+  if (props.slug === 'custom-base-url') {
+    baseURLError.value = error?.message || String(error)
+  }
 }
 
 // event.pois is an array because a single click can hit several overlapping
@@ -1023,9 +1049,11 @@ async function switchToSpanish() {
 <template>
   <main class="feature">
     <VisioOneMap
+      :key="mapKey"
       :hash="mapHash"
-      :base-url="visioOneBaseURL"
-      :authorization-token="visioOneAuthToken"
+      :baseURL="effectiveBaseURL"
+      :authorizationToken="visioOneAuthToken"
+      :showSdkError="props.slug !== 'custom-base-url'"
       @ready="handleReady"
       @error="handleError"
       @poi-click="handlePOIClick"
@@ -1061,7 +1089,8 @@ async function switchToSpanish() {
         props.slug === 'dynamic-poi-crud' ||
         props.slug === 'runtime-locale' ||
         props.slug === 'native-ui-replacement' ||
-        props.slug === 'add-locale'
+        props.slug === 'add-locale' ||
+        props.slug === 'custom-base-url'
       "
       class="fab"
       :aria-label="t('home.openControls')"
@@ -1544,6 +1573,23 @@ async function switchToSpanish() {
           >
             {{ switchedToSpanish ? t('features.addLocale.switchedButton') : t('features.addLocale.switchButton') }}
           </button>
+        </div>
+      </div>
+
+      <div v-else-if="props.slug === 'custom-base-url'" class="goto-poi-panel">
+        <input
+          v-model="baseURLInput"
+          class="goto-poi-panel__input"
+          :placeholder="t('features.customBaseUrl.placeholder')"
+          @keyup.enter="reloadWithBaseURL"
+        />
+        <div class="goto-poi-panel__actions">
+          <button class="goto-poi-panel__button" @click="reloadWithBaseURL">
+            {{ t('features.customBaseUrl.reload') }}
+          </button>
+        </div>
+        <div v-if="baseURLError" class="goto-poi-panel__error">
+          {{ t('features.customBaseUrl.error') }}: {{ baseURLError }}
         </div>
       </div>
     </BottomSheet>

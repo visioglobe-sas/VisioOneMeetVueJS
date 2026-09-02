@@ -7,6 +7,14 @@ const props = defineProps({
   baseURL: { type: String, default: undefined },
   authorizationToken: { type: String, default: undefined },
   viewOptions: { type: Object, default: () => ({}) },
+  // The SDK's own showError() renders at z-index 1000000 -- far above this
+  // app's top-bar/FAB/BottomSheet, permanently blocking them. Fine (and
+  // desired) for every other feature, where a load failure is never
+  // expected. custom-base-url deliberately triggers real load failures as
+  // part of its normal demo loop and needs to stay interactive afterwards,
+  // so it opts out and relies on its own panel error message instead. See
+  // docs/features/custom-base-url.md.
+  showSdkError: { type: Boolean, default: true },
 })
 
 const emit = defineEmits(['ready', 'error', 'poi-click'])
@@ -42,18 +50,34 @@ onMounted(async () => {
 
     emit('ready', { visioOne: visioOne.value, venue: venue.value, view: view.value })
   } catch (error) {
-    visioOne.value.showError(error, loaderContainer.value)
+    if (props.showSdkError) {
+      visioOne.value.showError(error, loaderContainer.value)
+    } else {
+      isLoading.value = false
+    }
     emit('error', error)
   }
 })
 
 onBeforeUnmount(async () => {
-  if (view.value) {
-    view.value.removeEventListener('poiclick', handlePOIClick)
-    await visioOne.value.destroyView(view.value)
-  }
-  if (venue.value) {
-    await visioOne.value.unloadVenue(venue.value)
+  // The SDK's own unloadVenue() throws on every call in this SDK version --
+  // it deletes the venue's internal private-state entry, then still reads
+  // from that same entry one line later for a final stats-logging call.
+  // The actual unload already completed correctly before that point; only
+  // the trailing telemetry call fails. Harmless, but unmounting/remounting
+  // VisioOneMap on every reload (as custom-base-url does via :key) would
+  // otherwise spam this as an unhandled rejection on every reload. See
+  // docs/features/custom-base-url.md.
+  try {
+    if (view.value) {
+      view.value.removeEventListener('poiclick', handlePOIClick)
+      await visioOne.value.destroyView(view.value)
+    }
+    if (venue.value) {
+      await visioOne.value.unloadVenue(venue.value)
+    }
+  } catch (error) {
+    console.warn('VisioOneMap teardown error (safe to ignore during a reload):', error)
   }
 })
 

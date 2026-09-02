@@ -85,4 +85,9 @@ export const features = [
     titleKey: 'features.addLocale.title',
     descriptionKey: 'features.addLocale.description',
   },
+  {
+    slug: 'custom-base-url',
+    titleKey: 'features.customBaseUrl.title',
+    descriptionKey: 'features.customBaseUrl.description',
+  },
 ]
