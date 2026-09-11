@@ -376,6 +376,75 @@ function clearItineraryFields() {
   itineraryDestinationId.value = ''
 }
 
+// custom-navigation-trace: reuses computeItinerary/clearItinerary/
+// currentNavigationTrace above (same itinerary fields, same screen just adds
+// a style layer) rather than duplicating the itinerary logic. Each preset is
+// a full NavigationTraceUpdateOptions applied via venue.updateNavigationTrace()
+// -- the SDK has no "reset to default" call, so 'visioglobeBlue' re-states the
+// Line defaults documented in the SDK typings (progressColor '#0094F0',
+// previewColor '#C5C5C5') as an explicit preset rather than a fake no-op. See
+// docs/features/custom-navigation-trace.md.
+const TRACE_PRESETS = {
+  visioglobeBlue: {
+    progressColor: '#0094F0',
+    progressOutlineColor: '#FFFFFF',
+    progressFutureColor: '#C5C5C5',
+    previewColor: '#C5C5C5',
+    previewOutlineColor: '#FFFFFF',
+  },
+  brandRed: {
+    progressColor: '#E53935',
+    progressOutlineColor: '#FFFFFF',
+    progressFutureColor: '#F8C9C7',
+    previewColor: '#F8C9C7',
+    previewOutlineColor: '#FFFFFF',
+  },
+  brandGreen: {
+    progressColor: '#2E7D32',
+    progressOutlineColor: '#FFFFFF',
+    progressFutureColor: '#C8E6C9',
+    previewColor: '#C8E6C9',
+    previewOutlineColor: '#FFFFFF',
+  },
+  brandPurple: {
+    progressColor: '#6A1B9A',
+    progressOutlineColor: '#FFFFFF',
+    progressFutureColor: '#E1BEE7',
+    previewColor: '#E1BEE7',
+    previewOutlineColor: '#FFFFFF',
+  },
+}
+const TRACE_PRESET_KEYS = Object.keys(TRACE_PRESETS)
+const selectedTracePreset = ref('visioglobeBlue')
+
+// venue.updateNavigationTrace() throws internally (TypeError reading
+// 'material' on one of the Line adapters -- see docs/features/
+// custom-navigation-trace.md) on a route that never crosses into a building,
+// even though it still applies every color correctly before throwing. Not
+// our bug to fix -- caught here so it doesn't surface as an uncaught Vue
+// error, colors are already applied by the time it throws.
+function updateTraceStyle(trace, preset) {
+  try {
+    venueRef.value.updateNavigationTrace(trace, preset)
+  } catch (error) {
+    console.warn('updateNavigationTrace threw (trace styling still applied):', error)
+  }
+}
+
+function applyTracePreset(presetKey) {
+  selectedTracePreset.value = presetKey
+  if (currentNavigationTrace) {
+    updateTraceStyle(currentNavigationTrace, TRACE_PRESETS[presetKey])
+  }
+}
+
+function computeStyledItinerary() {
+  computeItinerary()
+  if (currentNavigationTrace) {
+    updateTraceStyle(currentNavigationTrace, TRACE_PRESETS[selectedTracePreset.value])
+  }
+}
+
 // Selective UI masking: toggles one of the SDK's own default UI overlays via
 // view.setUIPartVisible(uiPart, isVisible) — called directly on the live
 // `view` instance, no bridge needed (this is the one platform where the app
@@ -1090,7 +1159,8 @@ async function switchToSpanish() {
         props.slug === 'runtime-locale' ||
         props.slug === 'native-ui-replacement' ||
         props.slug === 'add-locale' ||
-        props.slug === 'custom-base-url'
+        props.slug === 'custom-base-url' ||
+        props.slug === 'custom-navigation-trace'
       "
       class="fab"
       :aria-label="t('home.openControls')"
@@ -1220,6 +1290,51 @@ async function switchToSpanish() {
         </div>
         <div v-if="itineraryError" class="itinerary-panel__error">
           {{ itineraryError }}
+        </div>
+      </div>
+
+      <div v-else-if="props.slug === 'custom-navigation-trace'" class="itinerary-panel">
+        <h2 class="itinerary-panel__title">{{ t('features.customNavigationTrace.panelTitle') }}</h2>
+        <input
+          v-model="itineraryOriginId"
+          class="itinerary-panel__input"
+          :placeholder="t('features.computeNavigation.fromPlaceholder')"
+        />
+        <input
+          v-model="itineraryDestinationId"
+          class="itinerary-panel__input"
+          :placeholder="t('features.computeNavigation.toPlaceholder')"
+          @keyup.enter="computeStyledItinerary"
+        />
+        <div class="itinerary-panel__actions">
+          <button class="itinerary-panel__button" @click="computeStyledItinerary">
+            {{ t('features.computeNavigation.go') }}
+          </button>
+          <button class="itinerary-panel__button itinerary-panel__button--secondary" @click="clearItineraryFields">
+            {{ t('features.computeNavigation.clear') }}
+          </button>
+        </div>
+        <div v-if="itineraryError" class="itinerary-panel__error">
+          {{ itineraryError }}
+        </div>
+
+        <h2 class="itinerary-panel__title trace-style-panel__title">
+          {{ t('features.customNavigationTrace.styleTitle') }}
+        </h2>
+        <div class="trace-style-panel__swatches">
+          <button
+            v-for="presetKey in TRACE_PRESET_KEYS"
+            :key="presetKey"
+            type="button"
+            class="trace-style-panel__swatch"
+            :class="{ 'trace-style-panel__swatch--active': presetKey === selectedTracePreset }"
+            :style="{ background: TRACE_PRESETS[presetKey].progressColor }"
+            :aria-label="t(`features.customNavigationTrace.presets.${presetKey}`)"
+            @click="applyTracePreset(presetKey)"
+          />
+        </div>
+        <div class="trace-style-panel__label">
+          {{ t(`features.customNavigationTrace.presets.${selectedTracePreset}`) }}
         </div>
       </div>
 
@@ -1974,6 +2089,33 @@ async function switchToSpanish() {
   margin-top: 10px;
   font-size: 0.9em;
   color: #ff6b6b;
+}
+
+.trace-style-panel__title {
+  margin-top: 16px;
+}
+
+.trace-style-panel__swatches {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.trace-style-panel__swatch {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  border: 2px solid transparent;
+  cursor: pointer;
+}
+
+.trace-style-panel__swatch--active {
+  border-color: #fff;
+}
+
+.trace-style-panel__label {
+  font-size: 0.9em;
+  opacity: 0.8;
 }
 
 .ui-part-panel__title {

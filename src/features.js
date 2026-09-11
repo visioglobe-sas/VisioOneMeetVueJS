@@ -90,4 +90,9 @@ export const features = [
     titleKey: 'features.customBaseUrl.title',
     descriptionKey: 'features.customBaseUrl.description',
   },
+  {
+    slug: 'custom-navigation-trace',
+    titleKey: 'features.customNavigationTrace.title',
+    descriptionKey: 'features.customNavigationTrace.description',
+  },
 ]

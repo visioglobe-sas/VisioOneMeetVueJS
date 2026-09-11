@@ -175,6 +175,18 @@
       "placeholder": "URL de base",
       "reload": "Recharger",
       "error": "Échec du chargement de la carte"
+    },
+    "customNavigationTrace": {
+      "title": "Trace de navigation personnalisée",
+      "description": "Calcule un itinéraire et personnalise les couleurs de sa trace avec vos couleurs de marque.",
+      "panelTitle": "Itinéraire",
+      "styleTitle": "Couleur de la trace",
+      "presets": {
+        "visioglobeBlue": "Bleu Visioglobe (défaut)",
+        "brandRed": "Rouge de marque",
+        "brandGreen": "Vert de marque",
+        "brandPurple": "Violet de marque"
+      }
     }
   }
 }
