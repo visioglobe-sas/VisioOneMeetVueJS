@@ -187,6 +187,12 @@
         "brandGreen": "Brand green",
         "brandPurple": "Brand purple"
       }
+    },
+    "navigationExcludeModalities": {
+      "title": "Exclude Modalities/Attributes",
+      "description": "Compute a route while excluding a segment attribute or modality (e.g. elevator) from the routing graph.",
+      "panelTitle": "Itinerary",
+      "toggleLabel": "Avoid elevator"
     }
   }
 }
