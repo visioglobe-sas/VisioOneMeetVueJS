@@ -175,6 +175,18 @@
       "placeholder": "Base URL",
       "reload": "Reload",
       "error": "Failed to load venue"
+    },
+    "customNavigationTrace": {
+      "title": "Custom navigation trace",
+      "description": "Compute a route and style its trace with your own brand colors.",
+      "panelTitle": "Itinerary",
+      "styleTitle": "Trace color",
+      "presets": {
+        "visioglobeBlue": "Visioglobe blue (default)",
+        "brandRed": "Brand red",
+        "brandGreen": "Brand green",
+        "brandPurple": "Brand purple"
+      }
     }
   }
 }
