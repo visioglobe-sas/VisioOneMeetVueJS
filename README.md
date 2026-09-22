@@ -39,6 +39,7 @@ Each feature below is a self-contained example screen. The bullet links go to a 
 - [Add Locale](docs/features/add-locale.md) — register a brand-new language at runtime, never authored in VisioMapEditor, via `venue.translator.addLocale()`.
 - [Configurable Map Server](docs/features/custom-base-url.md) — point the SDK at a different map server via `LoadOptions.baseURL`, reloading the venue against whatever URL is entered.
 - [Custom Navigation Trace](docs/features/custom-navigation-trace.md) — restyle a computed route's colors to match a brand palette via `venue.updateNavigationTrace()`.
+- [Exclude Modalities/Attributes](docs/features/navigation-exclude-modalities.md) — compute a route that avoids a given segment attribute (e.g. elevator) via `venue.computeNavigation()`'s `excludedAttributes`/`excludedModalities`.
 
 ## Structure
 

@@ -328,7 +328,7 @@ const itineraryError = ref('')
 // as highlightedPoi for goto-poi.
 let currentNavigationTrace = null
 
-function computeItinerary() {
+function computeItinerary(navigationOptions = {}) {
   const venue = venueRef.value
   const view = viewRef.value
   if (!venue || !view) return
@@ -347,7 +347,15 @@ function computeItinerary() {
   clearItinerary()
 
   try {
-    const navigation = venue.computeNavigation({ origin: originPoi, destination: destinationPoi })
+    // navigationOptions is {} for plain compute-navigation (and
+    // custom-navigation-trace) -- spreading it in changes nothing about that
+    // call. navigation-exclude-modalities is the only caller that ever passes
+    // a non-empty object here (excludedAttributes), see below.
+    const navigation = venue.computeNavigation({
+      origin: originPoi,
+      destination: destinationPoi,
+      ...navigationOptions,
+    })
     currentNavigationTrace = venue.createNavigationTrace(navigation)
     view.setCurrentNavigationTrace(currentNavigationTrace)
     itineraryError.value = ''
@@ -443,6 +451,30 @@ function computeStyledItinerary() {
   if (currentNavigationTrace) {
     updateTraceStyle(currentNavigationTrace, TRACE_PRESETS[selectedTracePreset.value])
   }
+}
+
+// navigation-exclude-modalities: reuses the exact same itinerary fields/
+// Itinerary/Clear buttons/computeItinerary/clearItinerary as compute-navigation
+// above (same idiom as custom-navigation-trace's computeStyledItinerary) —
+// the only difference is the NavigationRequest.excludedAttributes passed
+// through to venue.computeNavigation(). The SDK's own JSDoc for
+// excludedAttributes describes it as e.g. "elevator", but the string value
+// actually tagged on this venue's floor-transition segments (confirmed via
+// SDK/MapEditor source and a sibling venue's routing fixture) is 'lift', not
+// 'elevator'. See docs/features/navigation-exclude-modalities.md.
+//
+// The toggle only affects the *next* "Itinerary" press -- flipping it never
+// auto-recomputes an already-displayed route, consistent with this app's
+// other toggles (e.g. camera-lock-on-position's lockCameraOnPosition).
+const EXCLUDED_ELEVATOR_ATTRIBUTE = 'lift'
+const excludeElevator = ref(false)
+
+function toggleExcludeElevator() {
+  excludeElevator.value = !excludeElevator.value
+}
+
+function computeItineraryExcludingModalities() {
+  computeItinerary(excludeElevator.value ? { excludedAttributes: [EXCLUDED_ELEVATOR_ATTRIBUTE] } : {})
 }
 
 // Selective UI masking: toggles one of the SDK's own default UI overlays via
@@ -1160,7 +1192,8 @@ async function switchToSpanish() {
         props.slug === 'native-ui-replacement' ||
         props.slug === 'add-locale' ||
         props.slug === 'custom-base-url' ||
-        props.slug === 'custom-navigation-trace'
+        props.slug === 'custom-navigation-trace' ||
+        props.slug === 'navigation-exclude-modalities'
       "
       class="fab"
       :aria-label="t('home.openControls')"
@@ -1335,6 +1368,41 @@ async function switchToSpanish() {
         </div>
         <div class="trace-style-panel__label">
           {{ t(`features.customNavigationTrace.presets.${selectedTracePreset}`) }}
+        </div>
+      </div>
+
+      <div v-else-if="props.slug === 'navigation-exclude-modalities'" class="itinerary-panel">
+        <h2 class="itinerary-panel__title">{{ t('features.navigationExcludeModalities.panelTitle') }}</h2>
+        <input
+          v-model="itineraryOriginId"
+          class="itinerary-panel__input"
+          :placeholder="t('features.computeNavigation.fromPlaceholder')"
+        />
+        <input
+          v-model="itineraryDestinationId"
+          class="itinerary-panel__input"
+          :placeholder="t('features.computeNavigation.toPlaceholder')"
+          @keyup.enter="computeItineraryExcludingModalities"
+        />
+        <label class="ui-part-panel__row navigation-exclude-modalities-panel__toggle">
+          <span class="ui-part-panel__label">{{ t('features.navigationExcludeModalities.toggleLabel') }}</span>
+          <input
+            type="checkbox"
+            class="ui-part-panel__switch"
+            :checked="excludeElevator"
+            @change="toggleExcludeElevator"
+          />
+        </label>
+        <div class="itinerary-panel__actions">
+          <button class="itinerary-panel__button" @click="computeItineraryExcludingModalities">
+            {{ t('features.computeNavigation.go') }}
+          </button>
+          <button class="itinerary-panel__button itinerary-panel__button--secondary" @click="clearItineraryFields">
+            {{ t('features.computeNavigation.clear') }}
+          </button>
+        </div>
+        <div v-if="itineraryError" class="itinerary-panel__error">
+          {{ itineraryError }}
         </div>
       </div>
 
@@ -2116,6 +2184,11 @@ async function switchToSpanish() {
 .trace-style-panel__label {
   font-size: 0.9em;
   opacity: 0.8;
+}
+
+.navigation-exclude-modalities-panel__toggle {
+  margin-top: 4px;
+  margin-bottom: 14px;
 }
 
 .ui-part-panel__title {

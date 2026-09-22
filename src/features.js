@@ -95,4 +95,9 @@ export const features = [
     titleKey: 'features.customNavigationTrace.title',
     descriptionKey: 'features.customNavigationTrace.description',
   },
+  {
+    slug: 'navigation-exclude-modalities',
+    titleKey: 'features.navigationExcludeModalities.title',
+    descriptionKey: 'features.navigationExcludeModalities.description',
+  },
 ]
