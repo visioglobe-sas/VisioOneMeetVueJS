@@ -193,6 +193,12 @@
       "description": "Compute a route while excluding a segment attribute or modality (e.g. elevator) from the routing graph.",
       "panelTitle": "Itinerary",
       "toggleLabel": "Avoid elevator"
+    },
+    "accessibleMode": {
+      "title": "Accessible Route",
+      "description": "Compute a route restricted to the venue's own accessible path (e.g. lift instead of stairs) via computeNavigation's isAccessible option.",
+      "panelTitle": "Itinerary",
+      "toggleLabel": "Accessible route"
     }
   }
 }
