@@ -193,6 +193,12 @@
       "description": "Calcule un itinéraire en excluant un attribut ou une modalité de segment (ex. ascenseur) du graphe de routage.",
       "panelTitle": "Itinéraire",
       "toggleLabel": "Éviter l'ascenseur"
+    },
+    "accessibleMode": {
+      "title": "Itinéraire accessible",
+      "description": "Calcule un itinéraire limité au chemin accessible du lieu (ex. ascenseur plutôt qu'escalier) via l'option isAccessible de computeNavigation.",
+      "panelTitle": "Itinéraire",
+      "toggleLabel": "Itinéraire accessible"
     }
   }
 }
