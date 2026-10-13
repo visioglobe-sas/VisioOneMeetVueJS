@@ -985,10 +985,14 @@ let trackedLabel = null
 const trackedPoiId = ref('')
 const trackedLabelText = ref('')
 
-function resolveAnchorPosition(anchor) {
+function resolveAnchorPosition(anchor, excludeLabel = null) {
   // Whichever visual element exists first — a label or a marker — carries a
-  // Position in the same WGS84 shape createLabel expects.
-  return anchor.labels?.[0]?.position ?? anchor.markers?.[0]?.position ?? null
+  // Position in the same WGS84 shape createLabel expects. `excludeLabel`
+  // skips a label we added ourselves (custom-text-label): on an anchor with
+  // no label of its own, it would otherwise be labels[0] and a re-place
+  // would copy its already-offset position.
+  const label = anchor.labels?.find((l) => l !== excludeLabel)
+  return label?.position ?? anchor.markers?.[0]?.position ?? null
 }
 
 function createDynamicPoi() {
@@ -1200,7 +1204,8 @@ function placeTextLabel() {
     return
   }
 
-  const anchorPosition = resolveAnchorPosition(anchor)
+  // Ignore our own current label, so re-placing doesn't stack the offset.
+  const anchorPosition = resolveAnchorPosition(anchor, placedTextLabel)
   if (!anchorPosition) {
     textLabelErrorKey.value = 'features.customTextLabel.poiNoPosition'
     return
