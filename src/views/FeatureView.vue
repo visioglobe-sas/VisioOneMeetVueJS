@@ -198,7 +198,13 @@ function goToPoi() {
   clearGoToPoiHighlight()
   highlightedPoi = poi
   poi.surfaces.forEach((surface) => venue.updateSurface(surface, { selectionColor: '#057DBC' }))
-  view.goToPOI(poi, {
+  focusCameraOnPoi(poi)
+}
+
+// Shared camera move: also used by 3d-icon-marker to bring the anchor POI's
+// floor into view after placing an image on it.
+function focusCameraOnPoi(poi) {
+  viewRef.value?.goToPOI(poi, {
     orientation: { pitch: 20 },
     padding: { top: 100, bottom: 100, left: 100, right: 100 },
   })
@@ -1112,6 +1118,10 @@ function placeIcon() {
     orientationType: iconOrientation.value,
   })
   placedIconPoiId.value = anchor.id
+  // An image on an indoor POI only renders while that POI's floor is shown,
+  // which isn't the case in the default global view: reuse goto-poi's
+  // camera move to bring it into view.
+  focusCameraOnPoi(anchor)
 }
 
 function selectIconOrientation(orientationType) {
