@@ -985,14 +985,16 @@ let trackedLabel = null
 const trackedPoiId = ref('')
 const trackedLabelText = ref('')
 
-function resolveAnchorPosition(anchor, excludeLabel = null) {
+function resolveAnchorPosition(anchor, excludeLabel = null, excludeMarker = null) {
   // Whichever visual element exists first — a label or a marker — carries a
   // Position in the same WGS84 shape createLabel expects. `excludeLabel`
   // skips a label we added ourselves (custom-text-label): on an anchor with
   // no label of its own, it would otherwise be labels[0] and a re-place
-  // would copy its already-offset position.
+  // would copy its already-offset position. `excludeMarker` does the same
+  // for a marker we added ourselves (html-overlay-marker).
   const label = anchor.labels?.find((l) => l !== excludeLabel)
-  return label?.position ?? anchor.markers?.[0]?.position ?? null
+  const marker = anchor.markers?.find((m) => m !== excludeMarker)
+  return label?.position ?? marker?.position ?? null
 }
 
 function createDynamicPoi() {
@@ -1274,6 +1276,132 @@ function handleRemoveTextLabel() {
   textLabelErrorKey.value = ''
 }
 
+// HTML overlay marker: venue.createMarker() overlays a plain HTML element on
+// the map at a WGS84 position, owned by an existing POI (the "anchor"). Unlike
+// a Label/Image it is not part of the 3D scene: it always faces the screen,
+// is never hidden by 3D geometry, and — the point of this demo — can receive
+// clicks. Position: same resolveAnchorPosition() helper as custom-text-label
+// (excluding our own badge, which gets appended to anchor.markers), same ~4 m
+// offset. The SDK owns the element's position/transform/z-index and forces
+// pointer-events:none at creation, so it's set back to 'auto' right after.
+// Text updates are plain DOM edits (MarkerUpdateOptions only has position and
+// isVisible). Only one badge at a time. See docs/features/html-overlay-marker.md.
+const OVERLAY_MARKER_DEFAULT_ANCHOR_POI_ID = 'B4-UL00-ID0009'
+const OVERLAY_MARKER_STYLE =
+  'background:#0B6BCB;color:#FFFFFF;font:600 14px sans-serif;padding:6px 12px;border-radius:14px;' +
+  'white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,.3);cursor:pointer'
+
+const overlayMarkerAnchorPoiId = ref(OVERLAY_MARKER_DEFAULT_ANCHOR_POI_ID)
+const overlayMarkerText = ref('Open now · 12:00–14:00')
+const overlayMarkerVisible = ref(true)
+const overlayMarkerTapCount = ref(0)
+// Single status line: either an error key, or a { key, params } message.
+const overlayMarkerStatus = ref({ key: 'features.htmlOverlayMarker.none', params: {}, error: false })
+// Same split as placedTextLabel/placedTextLabelPoiId above: the SDK Marker
+// instance is a module-local, its owner POI id mirrored into a ref.
+let placedOverlayMarker = null
+const placedOverlayMarkerPoiId = ref('')
+
+function setOverlayMarkerStatus(key, params = {}, error = false) {
+  overlayMarkerStatus.value = { key, params, error }
+}
+
+function removeOverlayMarker() {
+  const venue = venueRef.value
+  // removeMarker throws "Provided marker is not registered" on a second call:
+  // only call it while we still hold a reference. It also detaches the
+  // element from the DOM.
+  if (venue && placedOverlayMarker) venue.removeMarker(placedOverlayMarker)
+  placedOverlayMarker = null
+  placedOverlayMarkerPoiId.value = ''
+  overlayMarkerVisible.value = true
+}
+
+function handleOverlayMarkerClick(event) {
+  // Don't let the tap fall through to the map (it would open the POI card of
+  // whatever is underneath).
+  event.stopPropagation()
+  overlayMarkerTapCount.value += 1
+  setOverlayMarkerStatus('features.htmlOverlayMarker.tapped', { count: overlayMarkerTapCount.value })
+}
+
+function placeOverlayMarker() {
+  const venue = venueRef.value
+  if (!venue) return
+
+  const text = overlayMarkerText.value.trim()
+  if (!text) {
+    setOverlayMarkerStatus('features.htmlOverlayMarker.textRequired', {}, true)
+    return
+  }
+
+  const anchorId = overlayMarkerAnchorPoiId.value.trim()
+  const anchor = venue.pois.find((p) => p.id === anchorId)
+  if (!anchor) {
+    setOverlayMarkerStatus('features.htmlOverlayMarker.poiNotFound', {}, true)
+    return
+  }
+
+  // Ignore our own current badge, so re-placing doesn't stack the offset.
+  const anchorPosition = resolveAnchorPosition(anchor, null, placedOverlayMarker)
+  if (!anchorPosition) {
+    setOverlayMarkerStatus('features.htmlOverlayMarker.poiNoPosition', {}, true)
+    return
+  }
+
+  removeOverlayMarker()
+  const position = {
+    ...anchorPosition,
+    latitude: anchorPosition.latitude + TEXT_LABEL_POSITION_OFFSET,
+    longitude: anchorPosition.longitude + TEXT_LABEL_POSITION_OFFSET,
+  }
+  const element = document.createElement('div')
+  element.textContent = text
+  element.setAttribute('style', OVERLAY_MARKER_STYLE)
+  placedOverlayMarker = venue.createMarker({ poi: anchor, position, element })
+  // The SDK forces pointer-events:none on the element at creation (and never
+  // rewrites it afterwards): opt back in so the badge is clickable.
+  element.style.pointerEvents = 'auto'
+  element.addEventListener('click', handleOverlayMarkerClick)
+
+  placedOverlayMarkerPoiId.value = anchor.id
+  overlayMarkerVisible.value = true
+  overlayMarkerTapCount.value = 0
+  setOverlayMarkerStatus('features.htmlOverlayMarker.placedOn', { id: anchor.id })
+  // A marker is only displayed while its POI's floor is shown: reuse
+  // goto-poi's camera move, same as custom-text-label.
+  focusCameraOnPoi(anchor)
+}
+
+function updateOverlayMarkerText() {
+  if (!placedOverlayMarker) return
+
+  const text = overlayMarkerText.value.trim()
+  if (!text) {
+    setOverlayMarkerStatus('features.htmlOverlayMarker.textRequired', {}, true)
+    return
+  }
+  // The marker's element is a live DOM node: no SDK call needed.
+  placedOverlayMarker.element.textContent = text
+  setOverlayMarkerStatus('features.htmlOverlayMarker.textUpdated')
+}
+
+function toggleOverlayMarkerVisibility() {
+  const venue = venueRef.value
+  if (!venue || !placedOverlayMarker) return
+
+  const isVisible = !overlayMarkerVisible.value
+  venue.updateMarker(placedOverlayMarker, { isVisible })
+  overlayMarkerVisible.value = isVisible
+  setOverlayMarkerStatus(isVisible ? 'features.htmlOverlayMarker.shown' : 'features.htmlOverlayMarker.hidden')
+}
+
+function handleRemoveOverlayMarker() {
+  if (!placedOverlayMarker) return
+  removeOverlayMarker()
+  setOverlayMarkerStatus('features.htmlOverlayMarker.none')
+}
+
 // Runtime locale: venue.currentLocale (readonly) reflects the venue's
 // currently displayed language for POI/label text and the current UI/
 // Navigation; venue.setCurrentLocale(locale) changes it and returns a
@@ -1451,7 +1579,8 @@ async function switchToSpanish() {
         props.slug === 'navigation-exclude-modalities' ||
         props.slug === 'accessible-mode' ||
         props.slug === '3d-icon-marker' ||
-        props.slug === 'custom-text-label'
+        props.slug === 'custom-text-label' ||
+        props.slug === 'html-overlay-marker'
       "
       class="fab"
       :aria-label="t('home.openControls')"
@@ -2174,6 +2303,52 @@ async function switchToSpanish() {
         </div>
         <div v-else class="poi-panel__entry">
           {{ t('features.customTextLabel.none') }}
+        </div>
+      </div>
+
+      <div v-else-if="props.slug === 'html-overlay-marker'" class="goto-poi-panel">
+        <h2 class="poi-panel__title">{{ t('features.htmlOverlayMarker.panelTitle') }}</h2>
+        <input
+          v-model="overlayMarkerAnchorPoiId"
+          class="goto-poi-panel__input"
+          :placeholder="t('features.htmlOverlayMarker.anchorIdPlaceholder')"
+        />
+        <input
+          v-model="overlayMarkerText"
+          class="goto-poi-panel__input"
+          :placeholder="t('features.htmlOverlayMarker.textPlaceholder')"
+          @keyup.enter="placedOverlayMarkerPoiId ? updateOverlayMarkerText() : placeOverlayMarker()"
+        />
+        <div class="goto-poi-panel__actions">
+          <button class="goto-poi-panel__button" @click="placeOverlayMarker">
+            {{ t('features.htmlOverlayMarker.place') }}
+          </button>
+          <button
+            class="goto-poi-panel__button"
+            :disabled="!placedOverlayMarkerPoiId"
+            @click="updateOverlayMarkerText"
+          >
+            {{ t('features.htmlOverlayMarker.updateText') }}
+          </button>
+        </div>
+        <div class="goto-poi-panel__actions">
+          <button
+            class="goto-poi-panel__button goto-poi-panel__button--secondary"
+            :disabled="!placedOverlayMarkerPoiId"
+            @click="toggleOverlayMarkerVisibility"
+          >
+            {{ overlayMarkerVisible ? t('features.htmlOverlayMarker.hide') : t('features.htmlOverlayMarker.show') }}
+          </button>
+          <button
+            class="goto-poi-panel__button goto-poi-panel__button--secondary"
+            :disabled="!placedOverlayMarkerPoiId"
+            @click="handleRemoveOverlayMarker"
+          >
+            {{ t('features.htmlOverlayMarker.remove') }}
+          </button>
+        </div>
+        <div :class="overlayMarkerStatus.error ? 'goto-poi-panel__error' : 'poi-panel__entry'">
+          {{ t(overlayMarkerStatus.key, overlayMarkerStatus.params) }}
         </div>
       </div>
 

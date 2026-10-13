@@ -246,6 +246,27 @@
       "poiNotFound": "POI introuvable",
       "poiNoPosition": "Ce POI n'a pas de position",
       "textRequired": "Le texte est obligatoire"
+    },
+    "htmlOverlayMarker": {
+      "title": "Marqueur HTML superposé",
+      "description": "Épinglez sur la carte un badge HTML cliquable, jamais masqué par la 3D",
+      "panelTitle": "Marqueur HTML superposé",
+      "anchorIdPlaceholder": "ID du POI d'ancrage",
+      "textPlaceholder": "Texte du badge",
+      "place": "Placer le badge",
+      "updateText": "Modifier le texte",
+      "hide": "Masquer le badge",
+      "show": "Afficher le badge",
+      "remove": "Retirer le badge",
+      "placedOn": "Badge placé sur {id}",
+      "tapped": "Badge touché ({count})",
+      "textUpdated": "Texte du badge modifié",
+      "hidden": "Badge masqué",
+      "shown": "Badge affiché",
+      "none": "Aucun badge placé",
+      "poiNotFound": "POI introuvable",
+      "poiNoPosition": "Ce POI n'a pas de position",
+      "textRequired": "Le texte est obligatoire"
     }
   }
 }

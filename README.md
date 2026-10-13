@@ -43,6 +43,7 @@ Each feature below is a self-contained example screen. The bullet links go to a 
 - [Accessible Route](docs/features/accessible-mode.md) — compute a route restricted to the venue's own accessible path (e.g. lift instead of stairs) via `venue.computeNavigation()`'s `isAccessible` option.
 - [3D Icon Marker](docs/features/3d-icon-marker.md) — place a custom image at a spot on the 3D map with `venue.createImage()`, switching its camera orientation live via `venue.updateImage()`.
 - [Custom Text Label](docs/features/custom-text-label.md) — place your own text on the map with `venue.createLabel()` and restyle it live (color, size, text) via `venue.updateLabel()`.
+- [HTML Overlay Marker](docs/features/html-overlay-marker.md) — pin a clickable HTML element on the map, never hidden by 3D geometry, with `venue.createMarker()`, toggling it via `venue.updateMarker()`.
 
 ## Structure
 
