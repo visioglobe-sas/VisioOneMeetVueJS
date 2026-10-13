@@ -985,10 +985,14 @@ let trackedLabel = null
 const trackedPoiId = ref('')
 const trackedLabelText = ref('')
 
-function resolveAnchorPosition(anchor) {
+function resolveAnchorPosition(anchor, excludeLabel = null) {
   // Whichever visual element exists first — a label or a marker — carries a
-  // Position in the same WGS84 shape createLabel expects.
-  return anchor.labels?.[0]?.position ?? anchor.markers?.[0]?.position ?? null
+  // Position in the same WGS84 shape createLabel expects. `excludeLabel`
+  // skips a label we added ourselves (custom-text-label): on an anchor with
+  // no label of its own, it would otherwise be labels[0] and a re-place
+  // would copy its already-offset position.
+  const label = anchor.labels?.find((l) => l !== excludeLabel)
+  return label?.position ?? anchor.markers?.[0]?.position ?? null
 }
 
 function createDynamicPoi() {
@@ -1133,6 +1137,141 @@ function selectIconOrientation(orientationType) {
 function handleRemoveIcon() {
   removeIcon()
   iconErrorKey.value = ''
+}
+
+// Custom text label: venue.createLabel() places free text (opening hours,
+// price, zone name...) owned by an existing POI (the "anchor", no createPOI
+// needed), at the anchor's position copied with the same
+// resolveAnchorPosition() helper as dynamic-poi-crud / 3d-icon-marker, then
+// nudged ~4 m so it doesn't overlap the map's own label. Color and size are
+// restyled live with venue.updateLabel() — width AND height always sent
+// together, since width alone also resets height to width. `rotation` is
+// only part of LabelCreateOptions, not LabelUpdateOptions, so changing it
+// removes the label and recreates it. Only one label at a time. See
+// docs/features/custom-text-label.md.
+const TEXT_LABEL_DEFAULT_ANCHOR_POI_ID = 'B4-UL00-ID0009'
+const TEXT_LABEL_POSITION_OFFSET = 0.00004
+const TEXT_LABEL_COLORS = [
+  { key: 'red', value: '#E53935' },
+  { key: 'green', value: '#43A047' },
+  { key: 'blue', value: '#1E88E5' },
+  { key: 'dark', value: '#212121' },
+]
+const TEXT_LABEL_SIZES = {
+  small: { width: 10, height: 2 },
+  medium: { width: 16, height: 3 },
+  large: { width: 22, height: 4 },
+}
+const TEXT_LABEL_SIZE_KEYS = Object.keys(TEXT_LABEL_SIZES)
+const TEXT_LABEL_ROTATIONS = [0, 45, 90]
+
+const textLabelAnchorPoiId = ref(TEXT_LABEL_DEFAULT_ANCHOR_POI_ID)
+const textLabelText = ref('Lunch 12:00–14:00')
+const textLabelColor = ref(TEXT_LABEL_COLORS[0].value)
+const textLabelSize = ref('medium')
+const textLabelRotation = ref(0)
+const textLabelErrorKey = ref('')
+// Same split as placedIcon/placedIconPoiId above: the SDK Label instance is
+// a module-local, its owner POI id mirrored into a ref for the template.
+let placedTextLabel = null
+const placedTextLabelPoiId = ref('')
+
+function removeTextLabel() {
+  const venue = venueRef.value
+  // removeLabel throws "Provided label is not registered" on a second call:
+  // only call it while we still hold a reference.
+  if (venue && placedTextLabel) venue.removeLabel(placedTextLabel)
+  placedTextLabel = null
+  placedTextLabelPoiId.value = ''
+}
+
+function placeTextLabel() {
+  const venue = venueRef.value
+  if (!venue) return
+
+  textLabelErrorKey.value = ''
+  // Empty text would make createLabel throw "Cannot create Label, text is required".
+  const text = textLabelText.value.trim()
+  if (!text) {
+    textLabelErrorKey.value = 'features.customTextLabel.textRequired'
+    return
+  }
+
+  const anchorId = textLabelAnchorPoiId.value.trim()
+  const anchor = venue.pois.find((p) => p.id === anchorId)
+  if (!anchor) {
+    textLabelErrorKey.value = 'features.customTextLabel.poiNotFound'
+    return
+  }
+
+  // Ignore our own current label, so re-placing doesn't stack the offset.
+  const anchorPosition = resolveAnchorPosition(anchor, placedTextLabel)
+  if (!anchorPosition) {
+    textLabelErrorKey.value = 'features.customTextLabel.poiNoPosition'
+    return
+  }
+
+  removeTextLabel()
+  const position = {
+    ...anchorPosition,
+    latitude: anchorPosition.latitude + TEXT_LABEL_POSITION_OFFSET,
+    longitude: anchorPosition.longitude + TEXT_LABEL_POSITION_OFFSET,
+  }
+  const { width, height } = TEXT_LABEL_SIZES[textLabelSize.value]
+  placedTextLabel = venue.createLabel({
+    poi: anchor,
+    position,
+    width,
+    height,
+    text,
+    color: textLabelColor.value,
+    rotation: textLabelRotation.value,
+  })
+  placedTextLabelPoiId.value = anchor.id
+  // Same as 3d-icon-marker: a label only renders while its POI's floor is
+  // shown, so reuse goto-poi's camera move.
+  focusCameraOnPoi(anchor)
+}
+
+function selectTextLabelColor(color) {
+  textLabelColor.value = color
+  const venue = venueRef.value
+  if (venue && placedTextLabel) venue.updateLabel(placedTextLabel, { color })
+}
+
+function selectTextLabelSize(sizeKey) {
+  textLabelSize.value = sizeKey
+  const venue = venueRef.value
+  if (venue && placedTextLabel) venue.updateLabel(placedTextLabel, { ...TEXT_LABEL_SIZES[sizeKey] })
+}
+
+function updateTextLabelText() {
+  const venue = venueRef.value
+  if (!venue || !placedTextLabel) return
+
+  const text = textLabelText.value.trim()
+  if (!text) {
+    textLabelErrorKey.value = 'features.customTextLabel.textRequired'
+    return
+  }
+  textLabelErrorKey.value = ''
+  venue.updateLabel(placedTextLabel, { text })
+}
+
+function selectTextLabelRotation(rotation) {
+  textLabelRotation.value = rotation
+  const venue = venueRef.value
+  if (!venue || !placedTextLabel) return
+
+  // Not in LabelUpdateOptions: recreate with the same values + new rotation.
+  const { poi, position, width, height, text, color } = placedTextLabel
+  venue.removeLabel(placedTextLabel)
+  placedTextLabel = venue.createLabel({ poi, position, width, height, text, color, rotation })
+}
+
+function handleRemoveTextLabel() {
+  removeTextLabel()
+  textLabelErrorKey.value = ''
 }
 
 // Runtime locale: venue.currentLocale (readonly) reflects the venue's
@@ -1311,7 +1450,8 @@ async function switchToSpanish() {
         props.slug === 'custom-navigation-trace' ||
         props.slug === 'navigation-exclude-modalities' ||
         props.slug === 'accessible-mode' ||
-        props.slug === '3d-icon-marker'
+        props.slug === '3d-icon-marker' ||
+        props.slug === 'custom-text-label'
       "
       class="fab"
       :aria-label="t('home.openControls')"
@@ -1956,6 +2096,87 @@ async function switchToSpanish() {
         </div>
       </div>
 
+      <div v-else-if="props.slug === 'custom-text-label'" class="goto-poi-panel">
+        <h2 class="poi-panel__title">{{ t('features.customTextLabel.panelTitle') }}</h2>
+        <input
+          v-model="textLabelAnchorPoiId"
+          class="goto-poi-panel__input"
+          :placeholder="t('features.customTextLabel.anchorIdPlaceholder')"
+        />
+        <input
+          v-model="textLabelText"
+          class="goto-poi-panel__input"
+          :placeholder="t('features.customTextLabel.textPlaceholder')"
+          @keyup.enter="placedTextLabelPoiId ? updateTextLabelText() : placeTextLabel()"
+        />
+        <div class="explore-mode-panel__title">{{ t('features.customTextLabel.colorLabel') }}</div>
+        <div class="trace-style-panel__swatches">
+          <button
+            v-for="color in TEXT_LABEL_COLORS"
+            :key="color.key"
+            type="button"
+            class="trace-style-panel__swatch"
+            :class="{
+              'trace-style-panel__swatch--active': color.value === textLabelColor,
+              'text-label-panel__swatch--dark': color.key === 'dark',
+            }"
+            :style="{ background: color.value }"
+            :aria-label="t(`features.customTextLabel.colors.${color.key}`)"
+            @click="selectTextLabelColor(color.value)"
+          />
+        </div>
+        <div class="explore-mode-panel__title">{{ t('features.customTextLabel.sizeLabel') }}</div>
+        <div class="explore-mode-panel__segmented icon-marker-panel__orientations">
+          <button
+            v-for="sizeKey in TEXT_LABEL_SIZE_KEYS"
+            :key="sizeKey"
+            type="button"
+            class="explore-mode-panel__option"
+            :class="{ 'explore-mode-panel__option--active': sizeKey === textLabelSize }"
+            @click="selectTextLabelSize(sizeKey)"
+          >
+            {{ t(`features.customTextLabel.sizes.${sizeKey}`) }}
+          </button>
+        </div>
+        <div class="explore-mode-panel__title">{{ t('features.customTextLabel.rotationLabel') }}</div>
+        <div class="explore-mode-panel__segmented icon-marker-panel__orientations">
+          <button
+            v-for="rotation in TEXT_LABEL_ROTATIONS"
+            :key="rotation"
+            type="button"
+            class="explore-mode-panel__option"
+            :class="{ 'explore-mode-panel__option--active': rotation === textLabelRotation }"
+            @click="selectTextLabelRotation(rotation)"
+          >
+            {{ rotation }}°
+          </button>
+        </div>
+        <div class="goto-poi-panel__actions">
+          <button class="goto-poi-panel__button" @click="placeTextLabel">
+            {{ t('features.customTextLabel.place') }}
+          </button>
+          <button class="goto-poi-panel__button" :disabled="!placedTextLabelPoiId" @click="updateTextLabelText">
+            {{ t('features.customTextLabel.updateText') }}
+          </button>
+          <button
+            class="goto-poi-panel__button goto-poi-panel__button--secondary"
+            :disabled="!placedTextLabelPoiId"
+            @click="handleRemoveTextLabel"
+          >
+            {{ t('features.customTextLabel.remove') }}
+          </button>
+        </div>
+        <div v-if="textLabelErrorKey" class="goto-poi-panel__error">
+          {{ t(textLabelErrorKey) }}
+        </div>
+        <div v-else-if="placedTextLabelPoiId" class="poi-panel__entry">
+          {{ t('features.customTextLabel.placedOn', { id: placedTextLabelPoiId }) }}
+        </div>
+        <div v-else class="poi-panel__entry">
+          {{ t('features.customTextLabel.none') }}
+        </div>
+      </div>
+
       <div v-else-if="props.slug === 'custom-base-url'" class="goto-poi-panel">
         <input
           v-model="baseURLInput"
@@ -2380,6 +2601,11 @@ async function switchToSpanish() {
 
 .trace-style-panel__swatch--active {
   border-color: #fff;
+}
+
+/* The "Dark" text color chip would be invisible on the dark panel without an outline. */
+.text-label-panel__swatch--dark:not(.trace-style-panel__swatch--active) {
+  border-color: #666;
 }
 
 .trace-style-panel__label {
