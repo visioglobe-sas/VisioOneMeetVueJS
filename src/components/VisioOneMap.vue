@@ -37,7 +37,7 @@ onMounted(async () => {
   try {
     venue.value = await visioOne.value.loadVenue(
       {
-        hash: props.hash,
+        vg_maphash: props.hash,
         baseURL: props.baseURL,
         authorizationToken: props.authorizationToken,
       },
@@ -60,14 +60,10 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(async () => {
-  // The SDK's own unloadVenue() throws on every call in this SDK version --
-  // it deletes the venue's internal private-state entry, then still reads
-  // from that same entry one line later for a final stats-logging call.
-  // The actual unload already completed correctly before that point; only
-  // the trailing telemetry call fails. Harmless, but unmounting/remounting
-  // VisioOneMap on every reload (as custom-base-url does via :key) would
-  // otherwise spam this as an unhandled rejection on every reload. See
-  // docs/features/custom-base-url.md.
+  // Teardown errors are caught and logged rather than surfaced as unhandled
+  // rejections: VisioOneMap is unmounted/remounted on every reload (as
+  // custom-base-url does via :key). SDK 1.0.5's unloadVenue() threw on every
+  // call (fixed in 1.0.9). See docs/features/custom-base-url.md.
   try {
     if (view.value) {
       view.value.removeEventListener('poiclick', handlePOIClick)
