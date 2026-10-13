@@ -41,6 +41,7 @@ Each feature below is a self-contained example screen. The bullet links go to a 
 - [Custom Navigation Trace](docs/features/custom-navigation-trace.md) — restyle a computed route's colors to match a brand palette via `venue.updateNavigationTrace()`.
 - [Exclude Modalities/Attributes](docs/features/navigation-exclude-modalities.md) — compute a route that avoids a given segment attribute (e.g. elevator) via `venue.computeNavigation()`'s `excludedAttributes`/`excludedModalities`.
 - [Accessible Route](docs/features/accessible-mode.md) — compute a route restricted to the venue's own accessible path (e.g. lift instead of stairs) via `venue.computeNavigation()`'s `isAccessible` option.
+- [3D Icon Marker](docs/features/3d-icon-marker.md) — place a custom image at a spot on the 3D map with `venue.createImage()`, switching its camera orientation live via `venue.updateImage()`.
 
 ## Structure
 

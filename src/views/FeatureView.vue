@@ -1050,6 +1050,81 @@ function removeDynamicPoi() {
   dynamicPoiErrorKey.value = ''
 }
 
+// 3D icon marker: venue.createImage() places an Image — a picture sized in
+// meters, living in the 3D scene — owned by an existing POI (the "anchor"
+// itself, no createPOI needed) at that POI's own position, copied with the
+// same resolveAnchorPosition() helper as dynamic-poi-crud above (not a
+// copy). orientationType picks how it behaves relative to the camera:
+// 'fixed' (flat on the ground, fixed heading), 'flat' (flat on the ground,
+// turning to face the camera) or 'facing' (always camera-facing billboard).
+// Changing it while an image is placed goes through venue.updateImage() live.
+// Only one image at a time: placing again removes the previous one first.
+// See docs/features/3d-icon-marker.md.
+// 96x96 PNG (blue disc + white star), identical on all VisioOneMeet platforms.
+const ICON_DATA_URL =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAACBklEQVR42u3dWW4CMRBFUVbLarOn5JsIqRlsv6FuSfmE0O+IwS7bfbtR1GXdf34/+qMOhg2KcehgGIU+HsMt+DEQ7sHXQqQFXwWRHn4sQkvwkRCt4dsjtAdvDTEtfCuEqeFbIAgv/H/NQzAKfx6CYfhzEIzD70cQf+FFAGxFAEAIEBJ+J4LB7+04gKUIAAgBTEackQBfI4SG34MAgBDAaMIrHuAjBACEAGZTvhUAbyEAIAQwbHrUALyEAAAAcwGMe68V4V8iHAjJHeAI7mqAb0oNcOK1vwYgCP+di1E/334EMcDVRSmewx5gd60COPk6K94Bzy7u1OP4CAqrNQCCQdJ4gAcE0Uh1dPgrASYirB0Ri+dsRoa/A6AdYt+ckNksZn3wpwDSIc7NiprP69cFrwJwBdH3BUo6YLlN+qI2ZGZ7EgAA+AgqD99/ueKA8K0Q0veAxSMk7v+tQnABULQrvQZhQgBVv9gCQb00cXVoUQgOa0MBEALsCitvFlSEMBpAvT9gd0g5TRgATAGMe8Ru/ydul+TJULIBNiGMBlDvlFcE4rkGSISgCsICwOG0FGUIuQDCdaM121ydTs1S/wrJDP8gQN3pu44nJzo1RXLC56h6Ts4FAAROUCd8ELiLBuGDwJ2UCB8E7qhH8BMR4orgQZgdfjJEbRE8ELODd8KgBBjUQRSKuqo/fm7G7BpJ/VcAAAAASUVORK5CYII='
+const ICON_SIZE_METERS = 6
+const ICON_ORIENTATIONS = ['fixed', 'flat', 'facing']
+// "Restaurant" on B4's ground floor of the shared demo map: has a label, so a
+// position to copy.
+const ICON_DEFAULT_ANCHOR_POI_ID = 'B4-UL00-ID0009'
+
+const iconAnchorPoiId = ref(ICON_DEFAULT_ANCHOR_POI_ID)
+const iconOrientation = ref('facing')
+const iconErrorKey = ref('')
+// Same split as trackedPoi/trackedPoiId above: the SDK Image instance is a
+// module-local, its owner POI id mirrored into a ref for the template.
+let placedIcon = null
+const placedIconPoiId = ref('')
+
+function removeIcon() {
+  const venue = venueRef.value
+  if (venue && placedIcon) venue.removeImage(placedIcon)
+  placedIcon = null
+  placedIconPoiId.value = ''
+}
+
+function placeIcon() {
+  const venue = venueRef.value
+  if (!venue) return
+
+  iconErrorKey.value = ''
+  const anchorId = iconAnchorPoiId.value.trim()
+  const anchor = venue.pois.find((p) => p.id === anchorId)
+  if (!anchor) {
+    iconErrorKey.value = 'features.iconMarker3d.poiNotFound'
+    return
+  }
+
+  const position = resolveAnchorPosition(anchor)
+  if (!position) {
+    iconErrorKey.value = 'features.iconMarker3d.poiNoPosition'
+    return
+  }
+
+  removeIcon()
+  placedIcon = venue.createImage({
+    poi: anchor,
+    position,
+    width: ICON_SIZE_METERS,
+    height: ICON_SIZE_METERS,
+    url: ICON_DATA_URL,
+    orientationType: iconOrientation.value,
+  })
+  placedIconPoiId.value = anchor.id
+}
+
+function selectIconOrientation(orientationType) {
+  iconOrientation.value = orientationType
+  const venue = venueRef.value
+  if (venue && placedIcon) venue.updateImage(placedIcon, { orientationType })
+}
+
+function handleRemoveIcon() {
+  removeIcon()
+  iconErrorKey.value = ''
+}
+
 // Runtime locale: venue.currentLocale (readonly) reflects the venue's
 // currently displayed language for POI/label text and the current UI/
 // Navigation; venue.setCurrentLocale(locale) changes it and returns a
@@ -1225,7 +1300,8 @@ async function switchToSpanish() {
         props.slug === 'custom-base-url' ||
         props.slug === 'custom-navigation-trace' ||
         props.slug === 'navigation-exclude-modalities' ||
-        props.slug === 'accessible-mode'
+        props.slug === 'accessible-mode' ||
+        props.slug === '3d-icon-marker'
       "
       class="fab"
       :aria-label="t('home.openControls')"
@@ -1826,6 +1902,50 @@ async function switchToSpanish() {
         </div>
       </div>
 
+      <div v-else-if="props.slug === '3d-icon-marker'" class="goto-poi-panel">
+        <h2 class="poi-panel__title">{{ t('features.iconMarker3d.panelTitle') }}</h2>
+        <input
+          v-model="iconAnchorPoiId"
+          class="goto-poi-panel__input"
+          :placeholder="t('features.iconMarker3d.anchorIdPlaceholder')"
+          @keyup.enter="placeIcon"
+        />
+        <div class="explore-mode-panel__title">{{ t('features.iconMarker3d.orientationLabel') }}</div>
+        <div class="explore-mode-panel__segmented icon-marker-panel__orientations">
+          <button
+            v-for="orientation in ICON_ORIENTATIONS"
+            :key="orientation"
+            type="button"
+            class="explore-mode-panel__option"
+            :class="{ 'explore-mode-panel__option--active': orientation === iconOrientation }"
+            @click="selectIconOrientation(orientation)"
+          >
+            {{ t(`features.iconMarker3d.orientations.${orientation}`) }}
+          </button>
+        </div>
+        <div class="goto-poi-panel__actions">
+          <button class="goto-poi-panel__button" @click="placeIcon">
+            {{ t('features.iconMarker3d.place') }}
+          </button>
+          <button
+            class="goto-poi-panel__button goto-poi-panel__button--secondary"
+            :disabled="!placedIconPoiId"
+            @click="handleRemoveIcon"
+          >
+            {{ t('features.iconMarker3d.remove') }}
+          </button>
+        </div>
+        <div v-if="iconErrorKey" class="goto-poi-panel__error">
+          {{ t(iconErrorKey) }}
+        </div>
+        <div v-else-if="placedIconPoiId" class="poi-panel__entry">
+          {{ t('features.iconMarker3d.placedOn', { id: placedIconPoiId }) }}
+        </div>
+        <div v-else class="poi-panel__entry">
+          {{ t('features.iconMarker3d.none') }}
+        </div>
+      </div>
+
       <div v-else-if="props.slug === 'custom-base-url'" class="goto-poi-panel">
         <input
           v-model="baseURLInput"
@@ -2167,6 +2287,10 @@ async function switchToSpanish() {
 .explore-mode-panel__segmented {
   display: flex;
   gap: 8px;
+}
+
+.icon-marker-panel__orientations {
+  margin-bottom: 8px;
 }
 
 .explore-mode-panel__option {

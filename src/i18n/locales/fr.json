@@ -199,6 +199,24 @@
       "description": "Calcule un itinéraire limité au chemin accessible du lieu (ex. ascenseur plutôt qu'escalier) via l'option isAccessible de computeNavigation.",
       "panelTitle": "Itinéraire",
       "toggleLabel": "Itinéraire accessible"
+    },
+    "iconMarker3d": {
+      "title": "Icône 3D positionnée",
+      "description": "Placer une image personnalisée à un endroit de la carte 3D",
+      "panelTitle": "Icône 3D",
+      "anchorIdPlaceholder": "ID du POI d'ancrage",
+      "orientationLabel": "Orientation",
+      "orientations": {
+        "fixed": "Fixe",
+        "flat": "À plat",
+        "facing": "Face caméra"
+      },
+      "place": "Placer l'icône",
+      "remove": "Retirer l'icône",
+      "placedOn": "Icône placée sur {id}",
+      "none": "Aucune icône placée",
+      "poiNotFound": "POI introuvable",
+      "poiNoPosition": "Ce POI n'a pas de position"
     }
   }
 }

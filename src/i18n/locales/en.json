@@ -199,6 +199,24 @@
       "description": "Compute a route restricted to the venue's own accessible path (e.g. lift instead of stairs) via computeNavigation's isAccessible option.",
       "panelTitle": "Itinerary",
       "toggleLabel": "Accessible route"
+    },
+    "iconMarker3d": {
+      "title": "3D icon marker",
+      "description": "Place a custom image at a spot on the 3D map",
+      "panelTitle": "3D icon",
+      "anchorIdPlaceholder": "Anchor POI ID",
+      "orientationLabel": "Orientation",
+      "orientations": {
+        "fixed": "Fixed",
+        "flat": "Flat",
+        "facing": "Facing camera"
+      },
+      "place": "Place icon",
+      "remove": "Remove icon",
+      "placedOn": "Icon placed on {id}",
+      "none": "No icon placed",
+      "poiNotFound": "POI not found",
+      "poiNoPosition": "This POI has no position"
     }
   }
 }
