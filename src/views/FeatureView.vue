@@ -477,6 +477,37 @@ function computeItineraryExcludingModalities() {
   computeItinerary(excludeElevator.value ? { excludedAttributes: [EXCLUDED_ELEVATOR_ATTRIBUTE] } : {})
 }
 
+// accessible-mode: reuses the exact same itinerary fields/Itinerary/Clear
+// buttons/computeItinerary/clearItinerary as compute-navigation above (same
+// idiom as navigation-exclude-modalities right above) -- the only difference
+// is the NavigationRequest.isAccessible flag passed through to
+// venue.computeNavigation(). Per the SDK's own JSDoc, isAccessible: true
+// makes the routing algorithm only use "accessible" route -- internally
+// (confirmed by reading VisioOneImplementation/Venue/NavigationInteractor.ts
+// in the SDK source) this excludes the venue's own published
+// accessibleRouteAttributes/accessibleRouteModalities lists (venue-defined in
+// VisioMapEditor, read from applicationParameters.routingParams -- there is
+// no public getter for them on Venue.d.ts), the same excludedAttributes/
+// excludedModalities mechanism navigation-exclude-modalities drives manually
+// above, just pre-filled by the SDK instead of hand-picked here. Confirmed
+// live against the shared demo venue: this venue's accessible-route
+// exclusion set is (at least) 'stairway' -- computeNavigation({...,
+// isAccessible: true}) between B4-UL00-ID0010 and B4-UL01-ID0014 reroutes the
+// default stairway ('stairway'/'B4-stairs2') segment through the lift
+// ('lift'/'B4-lift1') instead. See docs/features/accessible-mode.md.
+//
+// The toggle only affects the *next* "Itinerary" press, same convention as
+// excludeElevator above.
+const accessibleMode = ref(false)
+
+function toggleAccessibleMode() {
+  accessibleMode.value = !accessibleMode.value
+}
+
+function computeItineraryAccessible() {
+  computeItinerary(accessibleMode.value ? { isAccessible: true } : {})
+}
+
 // Selective UI masking: toggles one of the SDK's own default UI overlays via
 // view.setUIPartVisible(uiPart, isVisible) — called directly on the live
 // `view` instance, no bridge needed (this is the one platform where the app
@@ -1193,7 +1224,8 @@ async function switchToSpanish() {
         props.slug === 'add-locale' ||
         props.slug === 'custom-base-url' ||
         props.slug === 'custom-navigation-trace' ||
-        props.slug === 'navigation-exclude-modalities'
+        props.slug === 'navigation-exclude-modalities' ||
+        props.slug === 'accessible-mode'
       "
       class="fab"
       :aria-label="t('home.openControls')"
@@ -1395,6 +1427,41 @@ async function switchToSpanish() {
         </label>
         <div class="itinerary-panel__actions">
           <button class="itinerary-panel__button" @click="computeItineraryExcludingModalities">
+            {{ t('features.computeNavigation.go') }}
+          </button>
+          <button class="itinerary-panel__button itinerary-panel__button--secondary" @click="clearItineraryFields">
+            {{ t('features.computeNavigation.clear') }}
+          </button>
+        </div>
+        <div v-if="itineraryError" class="itinerary-panel__error">
+          {{ itineraryError }}
+        </div>
+      </div>
+
+      <div v-else-if="props.slug === 'accessible-mode'" class="itinerary-panel">
+        <h2 class="itinerary-panel__title">{{ t('features.accessibleMode.panelTitle') }}</h2>
+        <input
+          v-model="itineraryOriginId"
+          class="itinerary-panel__input"
+          :placeholder="t('features.computeNavigation.fromPlaceholder')"
+        />
+        <input
+          v-model="itineraryDestinationId"
+          class="itinerary-panel__input"
+          :placeholder="t('features.computeNavigation.toPlaceholder')"
+          @keyup.enter="computeItineraryAccessible"
+        />
+        <label class="ui-part-panel__row accessible-mode-panel__toggle">
+          <span class="ui-part-panel__label">{{ t('features.accessibleMode.toggleLabel') }}</span>
+          <input
+            type="checkbox"
+            class="ui-part-panel__switch"
+            :checked="accessibleMode"
+            @change="toggleAccessibleMode"
+          />
+        </label>
+        <div class="itinerary-panel__actions">
+          <button class="itinerary-panel__button" @click="computeItineraryAccessible">
             {{ t('features.computeNavigation.go') }}
           </button>
           <button class="itinerary-panel__button itinerary-panel__button--secondary" @click="clearItineraryFields">
@@ -2187,6 +2254,11 @@ async function switchToSpanish() {
 }
 
 .navigation-exclude-modalities-panel__toggle {
+  margin-top: 4px;
+  margin-bottom: 14px;
+}
+
+.accessible-mode-panel__toggle {
   margin-top: 4px;
   margin-bottom: 14px;
 }

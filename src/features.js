@@ -100,4 +100,9 @@ export const features = [
     titleKey: 'features.navigationExcludeModalities.title',
     descriptionKey: 'features.navigationExcludeModalities.description',
   },
+  {
+    slug: 'accessible-mode',
+    titleKey: 'features.accessibleMode.title',
+    descriptionKey: 'features.accessibleMode.description',
+  },
 ]
