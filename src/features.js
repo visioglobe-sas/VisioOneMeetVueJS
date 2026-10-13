@@ -105,4 +105,9 @@ export const features = [
     titleKey: 'features.accessibleMode.title',
     descriptionKey: 'features.accessibleMode.description',
   },
+  {
+    slug: '3d-icon-marker',
+    titleKey: 'features.iconMarker3d.title',
+    descriptionKey: 'features.iconMarker3d.description',
+  },
 ]
