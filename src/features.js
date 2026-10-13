@@ -110,4 +110,9 @@ export const features = [
     titleKey: 'features.iconMarker3d.title',
     descriptionKey: 'features.iconMarker3d.description',
   },
+  {
+    slug: 'custom-text-label',
+    titleKey: 'features.customTextLabel.title',
+    descriptionKey: 'features.customTextLabel.description',
+  },
 ]

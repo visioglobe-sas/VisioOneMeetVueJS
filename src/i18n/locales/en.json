@@ -217,6 +217,35 @@
       "none": "No icon placed",
       "poiNotFound": "POI not found",
       "poiNoPosition": "This POI has no position"
+    },
+    "customTextLabel": {
+      "title": "Custom text label",
+      "description": "Place your own text on the map and restyle it live",
+      "panelTitle": "Custom text label",
+      "anchorIdPlaceholder": "Anchor POI ID",
+      "textPlaceholder": "Text",
+      "colorLabel": "Color",
+      "colors": {
+        "red": "Red",
+        "green": "Green",
+        "blue": "Blue",
+        "dark": "Dark"
+      },
+      "sizeLabel": "Size",
+      "sizes": {
+        "small": "Small",
+        "medium": "Medium",
+        "large": "Large"
+      },
+      "rotationLabel": "Rotation",
+      "place": "Place label",
+      "updateText": "Update text",
+      "remove": "Remove label",
+      "placedOn": "Label placed on {id}",
+      "none": "No label placed",
+      "poiNotFound": "POI not found",
+      "poiNoPosition": "This POI has no position",
+      "textRequired": "Text is required"
     }
   }
 }

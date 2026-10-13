@@ -217,6 +217,35 @@
       "none": "Aucune icône placée",
       "poiNotFound": "POI introuvable",
       "poiNoPosition": "Ce POI n'a pas de position"
+    },
+    "customTextLabel": {
+      "title": "Label texte personnalisé",
+      "description": "Placez votre propre texte sur la carte et modifiez son style en direct",
+      "panelTitle": "Label texte personnalisé",
+      "anchorIdPlaceholder": "ID du POI d'ancrage",
+      "textPlaceholder": "Texte",
+      "colorLabel": "Couleur",
+      "colors": {
+        "red": "Rouge",
+        "green": "Vert",
+        "blue": "Bleu",
+        "dark": "Sombre"
+      },
+      "sizeLabel": "Taille",
+      "sizes": {
+        "small": "Petit",
+        "medium": "Moyen",
+        "large": "Grand"
+      },
+      "rotationLabel": "Rotation",
+      "place": "Placer le label",
+      "updateText": "Modifier le texte",
+      "remove": "Retirer le label",
+      "placedOn": "Label placé sur {id}",
+      "none": "Aucun label placé",
+      "poiNotFound": "POI introuvable",
+      "poiNoPosition": "Ce POI n'a pas de position",
+      "textRequired": "Le texte est obligatoire"
     }
   }
 }
