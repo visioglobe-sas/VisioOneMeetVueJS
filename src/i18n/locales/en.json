@@ -267,6 +267,25 @@
       "poiNotFound": "POI not found",
       "poiNoPosition": "This POI has no position",
       "textRequired": "Text is required"
+    },
+    "customTheme": {
+      "title": "Custom theme",
+      "description": "Switch the 3D lighting theme and recolor the SDK's buttons live",
+      "panelTitle": "Custom theme",
+      "themeLabel": "3D theme",
+      "accentLabel": "Accent color",
+      "textAccentLabel": "Accent text color",
+      "colors": {
+        "blue": "Visioglobe blue",
+        "red": "Red",
+        "green": "Green",
+        "purple": "Purple",
+        "white": "White",
+        "yellow": "Yellow",
+        "black": "Black"
+      },
+      "reset": "Reset",
+      "hint": "Tap a place: its card's Go button uses the accent colors."
     }
   }
 }

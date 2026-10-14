@@ -44,6 +44,7 @@ Each feature below is a self-contained example screen. The bullet links go to a 
 - [3D Icon Marker](docs/features/3d-icon-marker.md) — place a custom image at a spot on the 3D map with `venue.createImage()`, switching its camera orientation live via `venue.updateImage()`.
 - [Custom Text Label](docs/features/custom-text-label.md) — place your own text on the map with `venue.createLabel()` and restyle it live (color, size, text) via `venue.updateLabel()`.
 - [HTML Overlay Marker](docs/features/html-overlay-marker.md) — pin a clickable HTML element on the map, never hidden by 3D geometry, with `venue.createMarker()`, toggling it via `venue.updateMarker()`.
+- [Custom Theme](docs/features/custom-theme.md) — switch the 3D lighting theme with `view.setTheme()` and recolor the SDK's own buttons live via `view.accentColor`/`view.textAccentColor`.
 
 ## Structure
 

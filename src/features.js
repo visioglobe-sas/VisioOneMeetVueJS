@@ -120,4 +120,9 @@ export const features = [
     titleKey: 'features.htmlOverlayMarker.title',
     descriptionKey: 'features.htmlOverlayMarker.description',
   },
+  {
+    slug: 'custom-theme',
+    titleKey: 'features.customTheme.title',
+    descriptionKey: 'features.customTheme.description',
+  },
 ]
