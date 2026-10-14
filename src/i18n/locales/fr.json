@@ -267,6 +267,25 @@
       "poiNotFound": "POI introuvable",
       "poiNoPosition": "Ce POI n'a pas de position",
       "textRequired": "Le texte est obligatoire"
+    },
+    "customTheme": {
+      "title": "Thème personnalisé",
+      "description": "Changez l'ambiance lumineuse 3D et recolorez les boutons du SDK en direct",
+      "panelTitle": "Thème personnalisé",
+      "themeLabel": "Thème 3D",
+      "accentLabel": "Couleur d'accent",
+      "textAccentLabel": "Couleur du texte d'accent",
+      "colors": {
+        "blue": "Bleu Visioglobe",
+        "red": "Rouge",
+        "green": "Vert",
+        "purple": "Violet",
+        "white": "Blanc",
+        "yellow": "Jaune",
+        "black": "Noir"
+      },
+      "reset": "Réinitialiser",
+      "hint": "Touchez un lieu : le bouton « Y aller » de sa fiche utilise les couleurs d'accent."
     }
   }
 }

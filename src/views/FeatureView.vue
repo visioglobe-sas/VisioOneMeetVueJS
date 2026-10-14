@@ -42,6 +42,13 @@ const baseURLError = ref(null)
 const effectiveBaseURL = computed(() =>
   props.slug === 'custom-base-url' ? appliedBaseURL.value : visioOneBaseURL,
 )
+// custom-theme: view.setTheme() only changes the 3D scene lights, which are
+// only rendered when the view is created with enableShadows: true — without
+// it every theme is pixel-identical. Shadows are expensive, so only this
+// screen opts in; every other screen keeps the SDK's default view options.
+// See docs/features/custom-theme.md.
+const mapViewOptions = computed(() => (props.slug === 'custom-theme' ? { enableShadows: true } : {}))
+
 const mapKey = computed(() => (props.slug === 'custom-base-url' ? appliedBaseURL.value : 'default'))
 
 function reloadWithBaseURL() {
@@ -71,6 +78,7 @@ function handleReady({ venue, view }) {
   if (props.slug === 'explore-mode') initExploreMode()
   if (props.slug === 'runtime-locale') initRuntimeLocale()
   if (props.slug === 'native-ui-replacement') initNativeUiReplacement()
+  if (props.slug === 'custom-theme') initCustomTheme()
 }
 
 function resetView() {
@@ -1528,6 +1536,65 @@ async function switchToSpanish() {
     switchingToSpanish.value = false
   }
 }
+
+// Custom theme: view.themes lists the registered 3D scene themes (read at
+// runtime, never hardcoded) and view.setTheme(id) applies one — lighting
+// only, visible because this screen's view is created with enableShadows
+// (see mapViewOptions above). view.accentColor / view.textAccentColor are
+// plain settable properties that recolor the SDK's own UI buttons (POI card
+// "Go", "Add a step"...) live. The SDK has no current-theme getter, so the
+// selection is tracked here. See docs/features/custom-theme.md.
+const DEFAULT_THEME = 'day'
+const ACCENT_COLORS = [
+  { key: 'blue', value: '#0094F0' },
+  { key: 'red', value: '#E53935' },
+  { key: 'green', value: '#43A047' },
+  { key: 'purple', value: '#8E24AA' },
+]
+const TEXT_ACCENT_COLORS = [
+  { key: 'white', value: '#FFFFFF' },
+  { key: 'yellow', value: '#FFEB3B' },
+  { key: 'black', value: '#212121' },
+]
+
+const availableThemes = ref([])
+const currentTheme = ref(DEFAULT_THEME)
+const accentColor = ref(ACCENT_COLORS[0].value)
+const textAccentColor = ref(TEXT_ACCENT_COLORS[0].value)
+
+function initCustomTheme() {
+  const view = viewRef.value
+  if (!view) return
+  availableThemes.value = [...view.themes]
+}
+
+function selectTheme(themeId) {
+  const view = viewRef.value
+  if (!view) return
+  // setTheme throws for an id that isn't in view.themes; we only offer those.
+  view.setTheme(themeId)
+  currentTheme.value = themeId
+}
+
+function selectAccentColor(value) {
+  const view = viewRef.value
+  if (!view) return
+  view.accentColor = value
+  accentColor.value = value
+}
+
+function selectTextAccentColor(value) {
+  const view = viewRef.value
+  if (!view) return
+  view.textAccentColor = value
+  textAccentColor.value = value
+}
+
+function resetCustomTheme() {
+  selectTheme(DEFAULT_THEME)
+  selectAccentColor(ACCENT_COLORS[0].value)
+  selectTextAccentColor(TEXT_ACCENT_COLORS[0].value)
+}
 </script>
 
 <template>
@@ -1537,6 +1604,7 @@ async function switchToSpanish() {
       :hash="mapHash"
       :baseURL="effectiveBaseURL"
       :authorizationToken="visioOneAuthToken"
+      :viewOptions="mapViewOptions"
       :showSdkError="props.slug !== 'custom-base-url'"
       @ready="handleReady"
       @error="handleError"
@@ -1580,7 +1648,8 @@ async function switchToSpanish() {
         props.slug === 'accessible-mode' ||
         props.slug === '3d-icon-marker' ||
         props.slug === 'custom-text-label' ||
-        props.slug === 'html-overlay-marker'
+        props.slug === 'html-overlay-marker' ||
+        (props.slug === 'custom-theme' && viewRef)
       "
       class="fab"
       :aria-label="t('home.openControls')"
@@ -2352,6 +2421,59 @@ async function switchToSpanish() {
         </div>
       </div>
 
+      <div v-else-if="props.slug === 'custom-theme'" class="goto-poi-panel">
+        <h2 class="poi-panel__title">{{ t('features.customTheme.panelTitle') }}</h2>
+        <div class="explore-mode-panel__title">{{ t('features.customTheme.themeLabel') }}</div>
+        <div class="explore-mode-panel__segmented">
+          <button
+            v-for="themeId in availableThemes"
+            :key="themeId"
+            type="button"
+            class="explore-mode-panel__option"
+            :class="{ 'explore-mode-panel__option--active': themeId === currentTheme }"
+            @click="selectTheme(themeId)"
+          >
+            {{ themeId }}
+          </button>
+        </div>
+        <div class="explore-mode-panel__title">{{ t('features.customTheme.accentLabel') }}</div>
+        <div class="trace-style-panel__swatches">
+          <button
+            v-for="color in ACCENT_COLORS"
+            :key="color.key"
+            type="button"
+            class="trace-style-panel__swatch"
+            :class="{ 'trace-style-panel__swatch--active': color.value === accentColor }"
+            :style="{ background: color.value }"
+            :aria-label="t(`features.customTheme.colors.${color.key}`)"
+            @click="selectAccentColor(color.value)"
+          />
+        </div>
+        <div class="explore-mode-panel__title">{{ t('features.customTheme.textAccentLabel') }}</div>
+        <div class="trace-style-panel__swatches">
+          <button
+            v-for="color in TEXT_ACCENT_COLORS"
+            :key="color.key"
+            type="button"
+            class="trace-style-panel__swatch"
+            :class="{
+              'trace-style-panel__swatch--active': color.value === textAccentColor,
+              'text-label-panel__swatch--dark': color.key === 'black',
+              'custom-theme-panel__swatch--light': color.key === 'white',
+            }"
+            :style="{ background: color.value }"
+            :aria-label="t(`features.customTheme.colors.${color.key}`)"
+            @click="selectTextAccentColor(color.value)"
+          />
+        </div>
+        <div class="goto-poi-panel__actions">
+          <button class="goto-poi-panel__button goto-poi-panel__button--secondary" @click="resetCustomTheme">
+            {{ t('features.customTheme.reset') }}
+          </button>
+        </div>
+        <div class="poi-panel__entry">{{ t('features.customTheme.hint') }}</div>
+      </div>
+
       <div v-else-if="props.slug === 'custom-base-url'" class="goto-poi-panel">
         <input
           v-model="baseURLInput"
@@ -2781,6 +2903,11 @@ async function switchToSpanish() {
 /* The "Dark" text color chip would be invisible on the dark panel without an outline. */
 .text-label-panel__swatch--dark:not(.trace-style-panel__swatch--active) {
   border-color: #666;
+}
+
+/* The active ring is white too, so a selected white chip gets an outer ring to stay distinguishable. */
+.custom-theme-panel__swatch--light.trace-style-panel__swatch--active {
+  box-shadow: 0 0 0 2px #0094f0;
 }
 
 .trace-style-panel__label {
