@@ -115,4 +115,9 @@ export const features = [
     titleKey: 'features.customTextLabel.title',
     descriptionKey: 'features.customTextLabel.description',
   },
+  {
+    slug: 'html-overlay-marker',
+    titleKey: 'features.htmlOverlayMarker.title',
+    descriptionKey: 'features.htmlOverlayMarker.description',
+  },
 ]

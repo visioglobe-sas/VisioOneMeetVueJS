@@ -246,6 +246,27 @@
       "poiNotFound": "POI not found",
       "poiNoPosition": "This POI has no position",
       "textRequired": "Text is required"
+    },
+    "htmlOverlayMarker": {
+      "title": "HTML overlay marker",
+      "description": "Pin a tappable HTML badge on the map that's never hidden by 3D",
+      "panelTitle": "HTML overlay marker",
+      "anchorIdPlaceholder": "Anchor POI ID",
+      "textPlaceholder": "Badge text",
+      "place": "Place badge",
+      "updateText": "Update text",
+      "hide": "Hide badge",
+      "show": "Show badge",
+      "remove": "Remove badge",
+      "placedOn": "Badge placed on {id}",
+      "tapped": "Badge tapped ({count})",
+      "textUpdated": "Badge text updated",
+      "hidden": "Badge hidden",
+      "shown": "Badge shown",
+      "none": "No badge placed",
+      "poiNotFound": "POI not found",
+      "poiNoPosition": "This POI has no position",
+      "textRequired": "Text is required"
     }
   }
 }
