@@ -65,3 +65,16 @@ Each feature below is a self-contained example screen. The bullet links go to a 
 ```sh
 npm run build
 ```
+
+## Embedding the map next to your own UI
+
+The SDK gives its UI layer (search bar, floor selector, POI card) `z-index: 100000`, its HTML markers up to `100000` and its loader/error screen `1000000`, inside a wrapper that creates no stacking context. Those values therefore compete with your whole page and draw over your own overlays (modals, bottom sheets, menus), swallowing their clicks. Give the element that contains the map a stacking context, as `src/components/VisioOneMap.vue` does:
+
+```css
+.visioone-map {
+  position: relative;
+  isolation: isolate;
+}
+```
+
+Every SDK z-index then stays confined to the map, in the same order relative to each other.

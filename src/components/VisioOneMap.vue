@@ -7,13 +7,13 @@ const props = defineProps({
   baseURL: { type: String, default: undefined },
   authorizationToken: { type: String, default: undefined },
   viewOptions: { type: Object, default: () => ({}) },
-  // The SDK's own showError() renders at z-index 1000000 -- far above this
-  // app's top-bar/FAB/BottomSheet, permanently blocking them. Fine (and
-  // desired) for every other feature, where a load failure is never
-  // expected. custom-base-url deliberately triggers real load failures as
-  // part of its normal demo loop and needs to stay interactive afterwards,
-  // so it opts out and relies on its own panel error message instead. See
-  // docs/features/custom-base-url.md.
+  // The SDK's own showError() covers the whole map with its error screen
+  // (confined to the map box by the isolation rule below, so the app's
+  // top bar/FAB/BottomSheet stay usable). Fine for every other feature,
+  // where a load failure is never expected. custom-base-url deliberately
+  // triggers real load failures as part of its normal demo loop and wants
+  // the map area to stay usable afterwards, so it opts out and relies on
+  // its own panel error message instead. See docs/features/custom-base-url.md.
   showSdkError: { type: Boolean, default: true },
 })
 
@@ -92,6 +92,13 @@ defineExpose({ visioOne, venue, view })
   position: relative;
   width: 100%;
   height: 100%;
+  /* The SDK gives its UI layer z-index 100000 (and its HTML markers up to
+     100000, its loader/showError() 1000000) inside a wrapper that creates
+     no stacking context, so those values compete with the whole page and
+     draw over this app's top bar, FAB and BottomSheet, swallowing their
+     clicks. isolation: isolate confines every SDK z-index to this box
+     without changing their order relative to each other. */
+  isolation: isolate;
 }
 
 .visioone-map__loader,
