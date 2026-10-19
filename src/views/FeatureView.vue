@@ -692,7 +692,7 @@ function toggleCameraLock() {
 }
 
 // Accuracy circle style: reuses the tracked-position simulation above and
-// recolors its dot + precision circle via
+// recolors its precision circle (not the center arrow) via
 // view.updatePositionTrackerGraphicOptions({ color, opacity }). That call
 // only stores the options — they take effect on the next
 // injectTrackedPosition, which the ~150ms simulation loop makes look live.
