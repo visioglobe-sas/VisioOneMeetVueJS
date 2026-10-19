@@ -91,6 +91,19 @@
       "panelTitle": "Camera lock on position",
       "toggleLabel": "Recenter camera on position"
     },
+    "accuracyCircleStyle": {
+      "title": "Accuracy circle style",
+      "description": "Recolor the tracked position's dot and precision circle, live",
+      "panelTitle": "Accuracy circle style",
+      "colorLabel": "Color",
+      "opacityLabel": "Opacity",
+      "colors": {
+        "default": "Default",
+        "red": "Red",
+        "green": "Green",
+        "purple": "Purple"
+      }
+    },
     "geofencing": {
       "title": "Geofencing",
       "description": "Trigger a visual alert when a simulated tracked position enters a POI's surface zone.",

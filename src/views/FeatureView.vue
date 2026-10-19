@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, ref, shallowRef } from 'vue'
+import { computed, onBeforeUnmount, ref, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import BottomSheet from '../components/BottomSheet.vue'
@@ -551,10 +551,14 @@ const POSITION_INTERVAL_MS = 150
 // 1/0.02 ticks = ~7.5s one-way, then back), not a real speed/time model.
 const POSITION_STEP = 0.02
 
-const originPoiId = ref('')
-const destinationPoiId = ref('')
+const isAccuracyCircleStyle = props.slug === 'accuracy-circle-style'
+// accuracy-circle-style pre-fills two POIs known to start fine on the shared
+// demo map, and starts at a slightly larger radius so the recolored circle
+// is easy to see; every other tracking screen keeps its previous defaults.
+const originPoiId = ref(isAccuracyCircleStyle ? 'B4-UL00-ID0009' : '')
+const destinationPoiId = ref(isAccuracyCircleStyle ? 'B4-UL00-ID0010' : '')
 const positionError = ref('')
-const accuracyRadius = ref(5)
+const accuracyRadius = ref(isAccuracyCircleStyle ? 6 : 5)
 const simulatingPosition = ref(false)
 let positionTimer = null
 // The resolved origin/destination positions and progress of the currently
@@ -617,6 +621,10 @@ function startSimulatedPosition() {
   // Mandatory before the first injectTrackedPosition call, or it throws —
   // see PositionTrackerOptions/View.allowTracking in the SDK typings.
   view.allowTracking = true
+  // No-op outside accuracy-circle-style. The SDK resets the dot/circle
+  // color+opacity to its defaults whenever tracking stops, so the selected
+  // style has to be re-applied on every Start, before the first inject.
+  applyPositionTrackerStyle()
   simulatingPosition.value = true
   injectSimulatedPositionTick()
   positionTimer = setInterval(injectSimulatedPositionTick, POSITION_INTERVAL_MS)
@@ -681,6 +689,40 @@ function toggleCameraLock() {
   if (!view) return
   lockCameraOnPosition.value = !lockCameraOnPosition.value
   view.lockCameraPositionOnTracking = lockCameraOnPosition.value
+}
+
+// Accuracy circle style: reuses the tracked-position simulation above and
+// recolors its dot + precision circle via
+// view.updatePositionTrackerGraphicOptions({ color, opacity }). That call
+// only stores the options — they take effect on the next
+// injectTrackedPosition, which the ~150ms simulation loop makes look live.
+// There is no getter, so the selection is tracked here. See
+// docs/features/accuracy-circle-style.md.
+const TRACKER_COLORS = [
+  { key: 'default', value: '#0094f0' },
+  { key: 'red', value: '#e53935' },
+  { key: 'green', value: '#43a047' },
+  { key: 'purple', value: '#8e24aa' },
+]
+const DEFAULT_TRACKER_OPACITY = 0.3
+const trackerColor = ref(TRACKER_COLORS[0].value)
+// Slider minimum is 0.1, not 0: the SDK's opacity validation is a falsy
+// check, so 0 would bypass it rather than mean "fully transparent".
+const trackerOpacity = ref(DEFAULT_TRACKER_OPACITY)
+
+function applyPositionTrackerStyle() {
+  if (!isAccuracyCircleStyle) return
+  viewRef.value?.updatePositionTrackerGraphicOptions({
+    color: trackerColor.value,
+    opacity: trackerOpacity.value,
+  })
+}
+
+watch(trackerOpacity, applyPositionTrackerStyle)
+
+function selectTrackerColor(color) {
+  trackerColor.value = color
+  applyPositionTrackerStyle()
 }
 
 // Geofencing: reuses the tracked-position simulation above (Origin/
@@ -1634,6 +1676,7 @@ function resetCustomTheme() {
         props.slug === 'ui-part-visibility' ||
         props.slug === 'simulated-position' ||
         props.slug === 'camera-lock-on-position' ||
+        props.slug === 'accuracy-circle-style' ||
         props.slug === 'geofencing' ||
         props.slug === 'clickable-surface' ||
         props.slug === 'custom-data' ||
@@ -1983,6 +2026,62 @@ function resetCustomTheme() {
             @change="toggleCameraLock"
           />
         </label>
+      </div>
+
+      <div v-else-if="props.slug === 'accuracy-circle-style'" class="position-panel">
+        <h2 class="position-panel__title">{{ t('features.accuracyCircleStyle.panelTitle') }}</h2>
+        <input
+          v-model="originPoiId"
+          class="position-panel__input"
+          :placeholder="t('features.simulatedPosition.fromPlaceholder')"
+        />
+        <input
+          v-model="destinationPoiId"
+          class="position-panel__input"
+          :placeholder="t('features.simulatedPosition.toPlaceholder')"
+        />
+        <label class="position-panel__radius">
+          <span>{{ t('features.simulatedPosition.radiusLabel') }}: {{ accuracyRadius }} m</span>
+          <input
+            v-model.number="accuracyRadius"
+            type="range"
+            min="1"
+            max="20"
+            step="1"
+            class="position-panel__slider"
+          />
+        </label>
+        <div class="explore-mode-panel__title">{{ t('features.accuracyCircleStyle.colorLabel') }}</div>
+        <div class="explore-mode-panel__segmented">
+          <button
+            v-for="color in TRACKER_COLORS"
+            :key="color.key"
+            type="button"
+            class="explore-mode-panel__option accuracy-style-panel__option"
+            :class="{ 'explore-mode-panel__option--active': color.value === trackerColor }"
+            @click="selectTrackerColor(color.value)"
+          >
+            <span class="accuracy-style-panel__dot" :style="{ background: color.value }" />
+            {{ t(`features.accuracyCircleStyle.colors.${color.key}`) }}
+          </button>
+        </div>
+        <label class="position-panel__radius">
+          <span>{{ t('features.accuracyCircleStyle.opacityLabel') }}: {{ trackerOpacity.toFixed(1) }}</span>
+          <input
+            v-model.number="trackerOpacity"
+            type="range"
+            min="0.1"
+            max="1"
+            step="0.1"
+            class="position-panel__slider"
+          />
+        </label>
+        <button class="position-panel__button" @click="toggleSimulatedPosition">
+          {{ simulatingPosition ? t('features.simulatedPosition.stop') : t('features.simulatedPosition.start') }}
+        </button>
+        <div v-if="positionError" class="position-panel__error">
+          {{ positionError }}
+        </div>
       </div>
 
       <div v-else-if="props.slug === 'geofencing'" class="position-panel">
@@ -2495,6 +2594,20 @@ function resetCustomTheme() {
 </template>
 
 <style scoped>
+.accuracy-style-panel__option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.accuracy-style-panel__dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
 .feature {
   position: relative;
   width: 100vw;

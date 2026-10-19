@@ -91,6 +91,19 @@
       "panelTitle": "Verrouillage caméra sur la position",
       "toggleLabel": "Recentrer la caméra sur la position"
     },
+    "accuracyCircleStyle": {
+      "title": "Style du cercle de précision",
+      "description": "Recolorer le point de position et son cercle de précision, en direct",
+      "panelTitle": "Style du cercle de précision",
+      "colorLabel": "Couleur",
+      "opacityLabel": "Opacité",
+      "colors": {
+        "default": "Défaut",
+        "red": "Rouge",
+        "green": "Vert",
+        "purple": "Violet"
+      }
+    },
     "geofencing": {
       "title": "Geofencing",
       "description": "Déclenche une alerte visuelle quand une position simulée entre dans la zone d'un POI.",
