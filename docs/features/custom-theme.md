@@ -4,7 +4,7 @@
 
 White-label styling of the map, applied live with no reload:
 
-- **3D scene theme**: `view.themes` lists the registered lighting themes (`['day', 'night', 'goldenHour']` in SDK 1.0.9) and `view.setTheme(name)` applies one. `night` gives a bluish, darker scene and `goldenHour` a warm, muted one.
+- **3D scene theme**: `view.themes` lists the registered lighting themes (`['day', 'night', 'goldenHour']` as of SDK 1.1.0) and `view.setTheme(name)` applies one. `night` gives a bluish, darker scene and `goldenHour` a warm, muted one.
 - **UI accent colors**: `view.accentColor` and `view.textAccentColor` are settable properties that recolor the SDK's own UI buttons (the POI card's "Go", "Add a step", "Remove step"...).
 
 Themes only take effect on a view created with `enableShadows: true` (see "Things to know").
@@ -42,7 +42,7 @@ Signatures, from `node_modules/@visioglobe/visioone/dist/src/VisioOne/`:
 - **Themes change the lighting only, never the UI.** Use `accentColor` / `textAccentColor` for the SDK's buttons.
 - **The initial lighting can't be restored exactly.** At load the SDK fits the light to the venue's bounds. `setTheme` then sets the theme's fixed light position, so after switching to any theme, `setTheme('day')` gives a slightly different render (other shadow direction, a bit darker) than the freshly loaded view, even though both are "day".
 - **Only use ids from `view.themes`.** An unknown id throws `Cannot apply given theme <name> as it isn't registered.`
-- **There is no getter for the current theme** in SDK 1.0.9. Track it yourself; the view starts on `day`.
+- **There is no getter for the current theme** (as of SDK 1.1.0). Track it yourself; the view starts on `day`.
 - **Invalid colors throw.** Assigning anything other than a hex, rgb(a) or hsl color to `accentColor` / `textAccentColor` throws `Invalid color format provided, it should be hex color, rgba color or hsl color.`
 - **Accent colors apply live** to every SDK button that uses them, including the ones not currently on screen. They do not change the color of a selected surface: that is the separate `view.surfaceSelectionColor`.
 
