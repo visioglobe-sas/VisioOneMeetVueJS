@@ -93,7 +93,7 @@
     },
     "accuracyCircleStyle": {
       "title": "Accuracy circle style",
-      "description": "Recolor the tracked position's dot and precision circle, live",
+      "description": "Recolor the tracked position's precision circle, live",
       "panelTitle": "Accuracy circle style",
       "colorLabel": "Color",
       "opacityLabel": "Opacity",

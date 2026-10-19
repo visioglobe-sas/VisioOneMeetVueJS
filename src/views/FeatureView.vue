@@ -621,7 +621,7 @@ function startSimulatedPosition() {
   // Mandatory before the first injectTrackedPosition call, or it throws —
   // see PositionTrackerOptions/View.allowTracking in the SDK typings.
   view.allowTracking = true
-  // No-op outside accuracy-circle-style. The SDK resets the dot/circle
+  // No-op outside accuracy-circle-style. The SDK resets the precision circle's
   // color+opacity to its defaults whenever tracking stops, so the selected
   // style has to be re-applied on every Start, before the first inject.
   applyPositionTrackerStyle()

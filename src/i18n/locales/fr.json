@@ -93,7 +93,7 @@
     },
     "accuracyCircleStyle": {
       "title": "Style du cercle de précision",
-      "description": "Recolorer le point de position et son cercle de précision, en direct",
+      "description": "Recolorer le cercle de précision de la position, en direct",
       "panelTitle": "Style du cercle de précision",
       "colorLabel": "Couleur",
       "opacityLabel": "Opacité",
