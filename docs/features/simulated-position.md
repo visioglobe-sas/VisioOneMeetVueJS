@@ -7,7 +7,7 @@ Animates a tracked position (dot + accuracy circle) between two POIs, via `view.
 ## SDK usage
 
 ```js
-view.allowTracking = true // required before the first injectTrackedPosition call
+if (!view.allowTracking) view.allowTracking = true // required before the first injectTrackedPosition call; set it once
 
 function injectPositionTick(position, precisionCircleRadius) {
   view.injectTrackedPosition({ position, precisionCircleRadius })
@@ -31,5 +31,6 @@ All three (`markers`, `labels`, `images`) carry a `Position` of the same shape (
 ## Things to know
 
 - `injectTrackedPosition` throws if called while `view.allowTracking` is still `false` — always set `allowTracking = true` before the first call.
+- Set `allowTracking = true` once, not on every position update: each assignment also forces `lockCameraPositionOnTracking` (and `lockCameraOrientationOnTracking`) back to `true`, re-locking the camera on the tracked position and undoing any user pan or lock toggle. Guard it with `if (!view.allowTracking)` — see `docs/features/camera-lock-on-position.md`.
 - There's no dedicated "stop tracking" method. Setting `allowTracking = false` back is the only documented way to remove the dot and accuracy circle from the map (`View.d.ts`).
 - `precisionCircleRadius` is read fresh on every call — updating it takes effect on the next `injectTrackedPosition` call, not retroactively on the position already displayed.

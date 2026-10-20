@@ -79,6 +79,10 @@ function handleReady({ venue, view }) {
   if (props.slug === 'runtime-locale') initRuntimeLocale()
   if (props.slug === 'native-ui-replacement') initNativeUiReplacement()
   if (props.slug === 'custom-theme') initCustomTheme()
+  // Subscribed on every screen (cheap, and the SDK fires these on any
+  // tracking screen) so the camera-lock toggle always mirrors the SDK state.
+  for (const type of CAMERA_LOCK_EVENTS) view.addEventListener(type, syncCameraLock)
+  syncCameraLock()
 }
 
 function resetView() {
@@ -171,9 +175,7 @@ function stopOccupancySimulation() {
 onBeforeUnmount(() => {
   clearInterval(occupancyTimer)
   clearInterval(positionTimer)
-  // Leaving the screen counts as "the simulation stops" too — don't leave the
-  // camera lock engaged for whatever destroys/recreates the view next.
-  resetCameraLock()
+  for (const type of CAMERA_LOCK_EVENTS) viewRef.value?.removeEventListener(type, syncCameraLock)
   viewRef.value?.removeEventListener('currentfloorchanged', handleCurrentFloorChanged)
   viewRef.value?.removeEventListener('exploremodechanged', handleExploreModeChanged)
 })
@@ -606,9 +608,6 @@ function startSimulatedPosition() {
   const destination = resolvePoiPosition(destinationId)
   if (!origin || !destination) {
     positionError.value = t('features.simulatedPosition.notFound')
-    // Nothing is tracked, so any lingering camera lock from a previous run
-    // would be meaningless — keep the "stopped -> unlocked" contract intact.
-    resetCameraLock()
     return
   }
   positionError.value = ''
@@ -619,8 +618,10 @@ function startSimulatedPosition() {
   positionDirection = 1
 
   // Mandatory before the first injectTrackedPosition call, or it throws —
-  // see PositionTrackerOptions/View.allowTracking in the SDK typings.
-  view.allowTracking = true
+  // see PositionTrackerOptions/View.allowTracking in the SDK typings. Set
+  // once per run, never per tick: every `allowTracking = true` also forces
+  // lockCameraPositionOnTracking back to true (re-locking the camera).
+  if (!view.allowTracking) view.allowTracking = true
   // No-op outside accuracy-circle-style. The SDK resets the precision circle's
   // color+opacity to its defaults whenever tracking stops, so the selected
   // style has to be re-applied on every Start, before the first inject.
@@ -661,12 +662,10 @@ function stopSimulatedPosition() {
   positionOrigin = null
   positionDestination = null
   // No dedicated "stop tracking" call in the SDK — allowTracking = false is
-  // what removes the marker/accuracy circle from the map.
+  // what removes the marker/accuracy circle from the map. It also forces the
+  // camera lock off and fires 'trackingoff', which syncCameraLock mirrors.
   if (viewRef.value) viewRef.value.allowTracking = false
   simulatingPosition.value = false
-  // Locking is a deliberate per-run opt-in, never a lingering state — see
-  // resetCameraLock and docs/features/camera-lock-on-position.md.
-  resetCameraLock()
 }
 
 // Camera lock on the tracked position: view.lockCameraPositionOnTracking is a
@@ -675,20 +674,29 @@ function stopSimulatedPosition() {
 // has a visible effect once allowTracking is true (i.e. a simulation is
 // running) — setting it beforehand is a documented no-op on the SDK side, not
 // an exception (unlike injectTrackedPosition), so no extra guard is needed
-// here beyond disabling the checkbox while nothing is being tracked. See
+// here beyond disabling the checkbox while nothing is being tracked.
+//
+// The SDK owns this state: allowTracking = true turns the lock on by itself,
+// allowTracking = false turns it off, and a user pan/drag turns it off too.
+// So the toggle is never an independent app-side value — it mirrors
+// view.lockCameraPositionOnTracking, re-read on 'trackingon'/'trackingoff'/
+// 'trackingchanged' (the events carry no value). See
 // docs/features/camera-lock-on-position.md.
+const CAMERA_LOCK_EVENTS = ['trackingon', 'trackingoff', 'trackingchanged']
 const lockCameraOnPosition = ref(false)
 
-function resetCameraLock() {
-  lockCameraOnPosition.value = false
-  if (viewRef.value) viewRef.value.lockCameraPositionOnTracking = false
+function syncCameraLock() {
+  lockCameraOnPosition.value = !!viewRef.value?.lockCameraPositionOnTracking
 }
 
-function toggleCameraLock() {
+function toggleCameraLock(event) {
   const view = viewRef.value
   if (!view) return
-  lockCameraOnPosition.value = !lockCameraOnPosition.value
-  view.lockCameraPositionOnTracking = lockCameraOnPosition.value
+  view.lockCameraPositionOnTracking = !view.lockCameraPositionOnTracking
+  // The UI follows the 'trackingchanged' event; re-sync anyway (and force the
+  // native checkbox back) so it never drifts if the setter was a no-op.
+  syncCameraLock()
+  if (event?.target) event.target.checked = lockCameraOnPosition.value
 }
 
 // Accuracy circle style: reuses the tracked-position simulation above and
