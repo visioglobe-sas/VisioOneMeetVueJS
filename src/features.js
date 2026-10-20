@@ -46,6 +46,11 @@ export const features = [
     descriptionKey: 'features.cameraLockOnPosition.description',
   },
   {
+    slug: 'accuracy-circle-style',
+    titleKey: 'features.accuracyCircleStyle.title',
+    descriptionKey: 'features.accuracyCircleStyle.description',
+  },
+  {
     slug: 'geofencing',
     titleKey: 'features.geofencing.title',
     descriptionKey: 'features.geofencing.description',
