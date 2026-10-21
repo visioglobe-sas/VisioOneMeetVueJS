@@ -46,6 +46,7 @@ Each feature below is a self-contained example screen. The bullet links go to a 
 - [Custom Text Label](docs/features/custom-text-label.md) — place your own text on the map with `venue.createLabel()` and restyle it live (color, size, text) via `venue.updateLabel()`.
 - [HTML Overlay Marker](docs/features/html-overlay-marker.md) — pin a clickable HTML element on the map, never hidden by 3D geometry, with `venue.createMarker()`, toggling it via `venue.updateMarker()`.
 - [Custom Theme](docs/features/custom-theme.md) — switch the 3D lighting theme with `view.setTheme()` and recolor the SDK's own buttons live via `view.accentColor`/`view.textAccentColor`.
+- [Camera Projection](docs/features/camera-projection-toggle.md) — switch between a 3D perspective and a flat orthographic camera by recreating the view with `createView()`'s `cameraProjection` option (read back via `view.cameraProjection`).
 
 ## Structure
 
