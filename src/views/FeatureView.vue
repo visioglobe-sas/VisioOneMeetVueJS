@@ -1735,7 +1735,7 @@ async function runCarousel(run, startIndex) {
     const poiAnimation = view.goToPOI(poi, {
       duration: 2500,
       easing: 'easeInOutQuad',
-      orientation: { heading: index * 90, pitch: 45 },
+      orientation: { heading: index * 90, pitch: 30 },
     })
     carouselAnimation = poiAnimation
     await poiAnimation
@@ -1755,8 +1755,8 @@ function startCarousel(startIndex = 0) {
 }
 
 // Stop: just stop scheduling. The hop in flight (if any) is left to finish
-// on its own — calling cancel() on it would make the camera jump to its
-// destination instead of gliding there.
+// on its own and glides to its destination (cancel() would stop the camera
+// where it is, mid-flight).
 function stopCarousel() {
   carouselRun++
   clearTimeout(carouselDwellTimer)
@@ -1781,9 +1781,11 @@ function handleCarouselMapPointerDown() {
     carouselState.value = 'paused'
     // Interrupt the in-flight animation in place: starting a new, zero-length
     // animation on the camera's current target/heading/pitch resolves the
-    // running one with isCanceled = true, without the jump-to-destination
-    // that cancel() would cause. Only done while an animation is actually
-    // running — nothing to interrupt during the dwell.
+    // running one with isCanceled = true and leaves the camera where it is.
+    // (cancel() would also stop it in place; its public typing wrongly says it
+    // puts the target in its final state, but the SDK core implementation and
+    // live measurements say otherwise.) Only done while an animation is
+    // actually running — nothing to interrupt during the dwell.
     if (view && carouselAnimation) {
       const { camera } = view
       carouselAnimation = null
