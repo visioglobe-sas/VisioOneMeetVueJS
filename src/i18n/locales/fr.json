@@ -147,6 +147,7 @@
       "newIdPlaceholder": "ID du nouveau POI",
       "anchorIdPlaceholder": "ID du POI d'ancrage (copier sa position)",
       "textPlaceholder": "Texte du label",
+      "defaultText": "POI de démo",
       "create": "Créer",
       "updateText": "Modifier le texte",
       "remove": "Supprimer",
@@ -237,6 +238,7 @@
       "panelTitle": "Label texte personnalisé",
       "anchorIdPlaceholder": "ID du POI d'ancrage",
       "textPlaceholder": "Texte",
+      "defaultText": "Déjeuner 12:00–14:00",
       "colorLabel": "Couleur",
       "colors": {
         "red": "Rouge",
@@ -266,6 +268,7 @@
       "panelTitle": "Marqueur HTML superposé",
       "anchorIdPlaceholder": "ID du POI d'ancrage",
       "textPlaceholder": "Texte du badge",
+      "defaultText": "Ouvert · 12:00–14:00",
       "place": "Placer le badge",
       "updateText": "Modifier le texte",
       "hide": "Masquer le badge",

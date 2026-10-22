@@ -4,6 +4,26 @@ import { useI18n } from 'vue-i18n'
 
 import BottomSheet from '../components/BottomSheet.vue'
 import VisioOneMap from '../components/VisioOneMap.vue'
+import {
+  ACCESSIBLE_FROM,
+  ACCESSIBLE_TO,
+  ANCHOR_POI_ID,
+  CAROUSEL_STOP_IDS,
+  CLICKABLE_SURFACE_POI_ID,
+  CUSTOM_DATA_MAP_HASH,
+  CUSTOM_DATA_POI_ID,
+  CUSTOM_DATA_SAMPLE_POI_IDS,
+  EXCLUDE_MODALITIES_FROM,
+  EXCLUDE_MODALITIES_TO,
+  GEOFENCE_ZONE_ID,
+  GOTO_POI_ID,
+  ITINERARY_FROM,
+  ITINERARY_TO,
+  NEW_POI_ID,
+  OCCUPANCY_POI_ID,
+  TRACKING_FROM,
+  TRACKING_TO,
+} from '../demoMap'
 import { features } from '../features'
 
 const props = defineProps({
@@ -23,8 +43,7 @@ const visioOneAuthToken = import.meta.env.VITE_VISIOONE_AUTH_TOKEN
 // none, whatever a given developer's local .env happens to be set to. So,
 // only for this one screen, override the hash with a dedicated map known
 // (confirmed live) to carry real CustomData — see docs/features/custom-data.md.
-// Every other slug keeps using visioOneHash exactly as before.
-const CUSTOM_DATA_MAP_HASH = 'kd9426d8cb3f1c532f22b5bcbd325c280bd351feb'
+// Every other slug uses visioOneHash. CUSTOM_DATA_MAP_HASH is in demoMap.js.
 const mapHash = computed(() => (props.slug === 'custom-data' ? CUSTOM_DATA_MAP_HASH : visioOneHash))
 
 // custom-base-url: LoadOptions.baseURL is only read once, inside
@@ -158,7 +177,7 @@ function handlePOIClick(event) {
 const OCCUPANCY_COLORS = ['#2ECC71', '#F1C40F', '#E74C3C']
 const OCCUPANCY_INTERVAL_MS = 2500
 
-const placeId = ref('')
+const placeId = ref(OCCUPANCY_POI_ID)
 const simulatingOccupancy = ref(false)
 let occupancyTimer = null
 let occupancyColorIndex = 0
@@ -220,7 +239,7 @@ onBeforeUnmount(() => {
 // Dedicated Place ID field + Go/Clear buttons — deliberately not wired to
 // map-click (that's the poi-click feature's own panel, see handlePOIClick
 // above). See docs/features/goto-poi.md for why the two aren't merged.
-const goToPoiId = ref('')
+const goToPoiId = ref(GOTO_POI_ID)
 const goToPoiNotFound = ref(false)
 // The POI currently highlighted by "Go" — kept so "Clear" can reset its
 // surfaces even if the input has been edited since, same pattern as
@@ -373,8 +392,18 @@ async function selectExploreMode(mode) {
 // venue.pois.find (same lookup pattern as goto-poi — no venue.getPOIById in
 // the SDK typings) so a typo surfaces as an explicit "not found" message
 // rather than a silent no-op. See docs/features/compute-navigation.md.
-const itineraryOriginId = ref('')
-const itineraryDestinationId = ref('')
+// The From/To fields are shared by 4 screens; each opens prefilled with a
+// pair that returns a route on the demo map (see demoMap.js).
+const ITINERARY_DEFAULTS = {
+  'navigation-exclude-modalities': [EXCLUDE_MODALITIES_FROM, EXCLUDE_MODALITIES_TO],
+  'accessible-mode': [ACCESSIBLE_FROM, ACCESSIBLE_TO],
+}
+const [itineraryDefaultFrom, itineraryDefaultTo] = ITINERARY_DEFAULTS[props.slug] ?? [
+  ITINERARY_FROM,
+  ITINERARY_TO,
+]
+const itineraryOriginId = ref(itineraryDefaultFrom)
+const itineraryDestinationId = ref(itineraryDefaultTo)
 const itineraryError = ref('')
 // The NavigationTrace currently displayed, if any — kept outside any ref
 // since it's only ever read by clearItinerary/computeItinerary, same pattern
@@ -591,11 +620,11 @@ const POSITION_INTERVAL_MS = 150
 const POSITION_STEP = 0.02
 
 const isAccuracyCircleStyle = props.slug === 'accuracy-circle-style'
-// accuracy-circle-style pre-fills two POIs known to start fine on the shared
-// demo map, and starts at a slightly larger radius so the recolored circle
-// is easy to see; every other tracking screen keeps its previous defaults.
-const originPoiId = ref(isAccuracyCircleStyle ? 'B4-UL00-ID0009' : '')
-const destinationPoiId = ref(isAccuracyCircleStyle ? 'B4-UL00-ID0010' : '')
+// The 4 tracking screens open prefilled with the same From/To pair (see
+// demoMap.js); accuracy-circle-style starts at a slightly larger radius so
+// the recolored circle is easy to see.
+const originPoiId = ref(TRACKING_FROM)
+const destinationPoiId = ref(TRACKING_TO)
 const positionError = ref('')
 const accuracyRadius = ref(isAccuracyCircleStyle ? 6 : 5)
 const simulatingPosition = ref(false)
@@ -781,7 +810,7 @@ function selectTrackerColor(color) {
 // call as clickable-surface/category-highlight; leaving reverts it. See
 // docs/features/geofencing.md.
 const GEOFENCE_ALERT_COLOR = '#E74C3C'
-const zonePoiId = ref('')
+const zonePoiId = ref(GEOFENCE_ZONE_ID)
 const geofenceZoneNotFound = ref(false)
 const geofenceNoSurface = ref(false)
 const insideGeofence = ref(false)
@@ -869,7 +898,7 @@ function toggleGeofencing() {
 // selectionColor below, with zero click-handling code on this side for the
 // coloring itself. Base building block for any "availability" use case (a
 // free/occupied room, a parking spot). See docs/features/clickable-surface.md.
-const clickableSurfacePlaceId = ref('')
+const clickableSurfacePlaceId = ref(CLICKABLE_SURFACE_POI_ID)
 const clickableSurfaceEnabled = ref(false)
 const clickableSurfaceNotFound = ref(false)
 // The POI actually toggled — captured at Enable, not re-read from the input
@@ -922,7 +951,7 @@ function disableClickableSurface() {
 // so the feature exercises both SDK calls from a single action, same
 // judgment call as the combined Start/Stop buttons elsewhere in this file.
 // See docs/features/custom-data.md.
-const customDataPlaceId = ref('')
+const customDataPlaceId = ref(CUSTOM_DATA_POI_ID)
 const customDataLoading = ref(false)
 const customDataNotFound = ref(false)
 // null = nothing loaded yet; [] = POI found but its CustomData is {}; a
@@ -930,10 +959,9 @@ const customDataNotFound = ref(false)
 // template tell "nothing attempted" from "attempted, found nothing".
 const customDataEntries = ref(null)
 
-// POI ids confirmed (live, against CUSTOM_DATA_MAP_HASH) to carry real,
-// non-empty CustomData — offered as one-tap shortcuts so the feature shows
-// actual key/value pairs without hunting for a valid id first.
-const CUSTOM_DATA_SAMPLE_POI_IDS = ['B1', 'B3-UL00-ID0065', 'B3-UL00-ID0064']
+// CUSTOM_DATA_SAMPLE_POI_IDS (demoMap.js) carry real, non-empty CustomData —
+// offered as one-tap shortcuts so the feature shows actual key/value pairs
+// without hunting for a valid id first.
 
 function loadCustomDataSample(id) {
   customDataPlaceId.value = id
@@ -1067,9 +1095,9 @@ function clearCategoryHighlight() {
 // docs/features/dynamic-poi-crud.md.
 const DEFAULT_LABEL_WIDTH = 2
 
-const newPoiId = ref('')
-const anchorPoiId = ref('')
-const labelText = ref('')
+const newPoiId = ref(NEW_POI_ID)
+const anchorPoiId = ref(ANCHOR_POI_ID)
+const labelText = ref(t('features.dynamicPoiCrud.defaultText'))
 const dynamicPoiErrorKey = ref('')
 // The actual POI/Label SDK instances currently tracked are kept as
 // module-locals, not refs — same split as highlightedPoi/clickableSurfacePoi
@@ -1172,11 +1200,8 @@ const ICON_DATA_URL =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAACBklEQVR42u3dWW4CMRBFUVbLarOn5JsIqRlsv6FuSfmE0O+IwS7bfbtR1GXdf34/+qMOhg2KcehgGIU+HsMt+DEQ7sHXQqQFXwWRHn4sQkvwkRCt4dsjtAdvDTEtfCuEqeFbIAgv/H/NQzAKfx6CYfhzEIzD70cQf+FFAGxFAEAIEBJ+J4LB7+04gKUIAAgBTEackQBfI4SG34MAgBDAaMIrHuAjBACEAGZTvhUAbyEAIAQwbHrUALyEAAAAcwGMe68V4V8iHAjJHeAI7mqAb0oNcOK1vwYgCP+di1E/334EMcDVRSmewx5gd60COPk6K94Bzy7u1OP4CAqrNQCCQdJ4gAcE0Uh1dPgrASYirB0Ri+dsRoa/A6AdYt+ckNksZn3wpwDSIc7NiprP69cFrwJwBdH3BUo6YLlN+qI2ZGZ7EgAA+AgqD99/ueKA8K0Q0veAxSMk7v+tQnABULQrvQZhQgBVv9gCQb00cXVoUQgOa0MBEALsCitvFlSEMBpAvT9gd0g5TRgATAGMe8Ru/ydul+TJULIBNiGMBlDvlFcE4rkGSISgCsICwOG0FGUIuQDCdaM121ydTs1S/wrJDP8gQN3pu44nJzo1RXLC56h6Ts4FAAROUCd8ELiLBuGDwJ2UCB8E7qhH8BMR4orgQZgdfjJEbRE8ELODd8KgBBjUQRSKuqo/fm7G7BpJ/VcAAAAASUVORK5CYII='
 const ICON_SIZE_METERS = 6
 const ICON_ORIENTATIONS = ['fixed', 'flat', 'facing']
-// "Restaurant" on B4's ground floor of the shared demo map: has a label, so a
-// position to copy.
-const ICON_DEFAULT_ANCHOR_POI_ID = 'B4-UL00-ID0009'
-
-const iconAnchorPoiId = ref(ICON_DEFAULT_ANCHOR_POI_ID)
+// ANCHOR_POI_ID (demoMap.js) has a label, so a position to copy.
+const iconAnchorPoiId = ref(ANCHOR_POI_ID)
 const iconOrientation = ref('facing')
 const iconErrorKey = ref('')
 // Same split as trackedPoi/trackedPoiId above: the SDK Image instance is a
@@ -1246,7 +1271,6 @@ function handleRemoveIcon() {
 // only part of LabelCreateOptions, not LabelUpdateOptions, so changing it
 // removes the label and recreates it. Only one label at a time. See
 // docs/features/custom-text-label.md.
-const TEXT_LABEL_DEFAULT_ANCHOR_POI_ID = 'B4-UL00-ID0009'
 const TEXT_LABEL_POSITION_OFFSET = 0.00004
 const TEXT_LABEL_COLORS = [
   { key: 'red', value: '#E53935' },
@@ -1262,8 +1286,8 @@ const TEXT_LABEL_SIZES = {
 const TEXT_LABEL_SIZE_KEYS = Object.keys(TEXT_LABEL_SIZES)
 const TEXT_LABEL_ROTATIONS = [0, 45, 90]
 
-const textLabelAnchorPoiId = ref(TEXT_LABEL_DEFAULT_ANCHOR_POI_ID)
-const textLabelText = ref('Lunch 12:00–14:00')
+const textLabelAnchorPoiId = ref(ANCHOR_POI_ID)
+const textLabelText = ref(t('features.customTextLabel.defaultText'))
 const textLabelColor = ref(TEXT_LABEL_COLORS[0].value)
 const textLabelSize = ref('medium')
 const textLabelRotation = ref(0)
@@ -1381,13 +1405,12 @@ function handleRemoveTextLabel() {
 // pointer-events:none at creation, so it's set back to 'auto' right after.
 // Text updates are plain DOM edits (MarkerUpdateOptions only has position and
 // isVisible). Only one badge at a time. See docs/features/html-overlay-marker.md.
-const OVERLAY_MARKER_DEFAULT_ANCHOR_POI_ID = 'B4-UL00-ID0009'
 const OVERLAY_MARKER_STYLE =
   'background:#0B6BCB;color:#FFFFFF;font:600 14px sans-serif;padding:6px 12px;border-radius:14px;' +
   'white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,.3);cursor:pointer'
 
-const overlayMarkerAnchorPoiId = ref(OVERLAY_MARKER_DEFAULT_ANCHOR_POI_ID)
-const overlayMarkerText = ref('Open now · 12:00–14:00')
+const overlayMarkerAnchorPoiId = ref(ANCHOR_POI_ID)
+const overlayMarkerText = ref(t('features.htmlOverlayMarker.defaultText'))
 const overlayMarkerVisible = ref(true)
 const overlayMarkerTapCount = ref(0)
 // Single status line: either an error key, or a { key, params } message.
@@ -1690,7 +1713,6 @@ function resetCustomTheme() {
 // Start/resume bumps `carouselRun`; a loop whose run id is stale, or whose
 // awaited AnimationPromise reports isCanceled, exits. See
 // docs/features/camera-showcase-carousel.md.
-const CAROUSEL_STOP_IDS = ['B4-UL00-ID0009', 'B1-LL01-ID0152', 'B3-UL00-ID0064', 'B4-UL03-ID0015']
 const CAROUSEL_DWELL_MS = 3000
 const CAROUSEL_RESUME_MS = 10000
 
@@ -2013,10 +2035,10 @@ onBeforeUnmount(stopCarousel)
           v-model="itineraryDestinationId"
           class="itinerary-panel__input"
           :placeholder="t('features.computeNavigation.toPlaceholder')"
-          @keyup.enter="computeItinerary"
+          @keyup.enter="computeItinerary()"
         />
         <div class="itinerary-panel__actions">
-          <button class="itinerary-panel__button" @click="computeItinerary">
+          <button class="itinerary-panel__button" @click="computeItinerary()">
             {{ t('features.computeNavigation.go') }}
           </button>
           <button class="itinerary-panel__button itinerary-panel__button--secondary" @click="clearItineraryFields">

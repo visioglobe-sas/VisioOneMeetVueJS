@@ -11,6 +11,8 @@ cp .env.example .env
 
 Edit `.env` and set `VITE_VISIOONE_HASH` to your map's hash, available from [my.visioglobe.com](https://my.visioglobe.com) (the map must have been "built" first).
 
+The feature screens open with their input fields prefilled with POI ids of Visioglobe's shared demo map. They all live in `src/demoMap.js`: replace them with your own map's ids.
+
 ```sh
 npm run dev
 ```
@@ -56,6 +58,7 @@ Each feature below is a self-contained example screen. The bullet links go to a 
 - `src/App.vue` — renders the router view; navigation between the home menu and each feature screen goes through `vue-router`.
 - `src/views/HomeView.vue` — the menu screen, listing the features registered in `src/features.js`.
 - `src/views/FeatureView.vue` — hosts `VisioOneMap` for each feature screen, reads the map configuration from environment variables, and drives the SDK calls specific to the selected feature.
+- `src/demoMap.js` — the demo map's POI ids used as default input values (and the dedicated custom-data map hash); replace them with your own map's ids.
 
 ## Environment variables
 

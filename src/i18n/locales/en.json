@@ -147,6 +147,7 @@
       "newIdPlaceholder": "New POI ID",
       "anchorIdPlaceholder": "Anchor POI ID (copy its position)",
       "textPlaceholder": "Label text",
+      "defaultText": "Demo POI",
       "create": "Create",
       "updateText": "Update text",
       "remove": "Remove",
@@ -237,6 +238,7 @@
       "panelTitle": "Custom text label",
       "anchorIdPlaceholder": "Anchor POI ID",
       "textPlaceholder": "Text",
+      "defaultText": "Lunch 12:00–14:00",
       "colorLabel": "Color",
       "colors": {
         "red": "Red",
@@ -266,6 +268,7 @@
       "panelTitle": "HTML overlay marker",
       "anchorIdPlaceholder": "Anchor POI ID",
       "textPlaceholder": "Badge text",
+      "defaultText": "Open now · 12:00–14:00",
       "place": "Place badge",
       "updateText": "Update text",
       "hide": "Hide badge",
