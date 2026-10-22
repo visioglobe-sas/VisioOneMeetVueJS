@@ -321,6 +321,11 @@
       "paused": "Paused — resumes after 10 s without touch",
       "stopped": "Stopped",
       "hint": "Touching the map pauses the tour; it resumes on its own after 10 s."
+    },
+    "authToken": {
+      "title": "Protected map (token)",
+      "description": "Code sample: load a map protected by an authorization token",
+      "body": "This feature is a code sample only: this demo has no protected map to load. See {file} and {doc}, then replace the placeholder map hash and token with your own values."
     }
   }
 }

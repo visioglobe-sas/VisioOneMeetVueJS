@@ -321,6 +321,11 @@
       "paused": "En pause — reprend après 10 s sans toucher",
       "stopped": "Arrêtée",
       "hint": "Toucher la carte met la visite en pause ; elle reprend seule après 10 s."
+    },
+    "authToken": {
+      "title": "Carte protégée (jeton)",
+      "description": "Exemple de code : charger une carte protégée par un jeton d'autorisation",
+      "body": "Cette feature est uniquement un exemple de code : cette démo n'a pas de carte protégée à charger. Voir {file} et {doc}, puis remplacer le hash de carte et le jeton fictifs par vos propres valeurs."
     }
   }
 }

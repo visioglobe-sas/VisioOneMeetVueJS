@@ -140,4 +140,9 @@ export const features = [
     titleKey: 'features.cameraShowcaseCarousel.title',
     descriptionKey: 'features.cameraShowcaseCarousel.description',
   },
+  {
+    slug: 'auth-token',
+    titleKey: 'features.authToken.title',
+    descriptionKey: 'features.authToken.description',
+  },
 ]

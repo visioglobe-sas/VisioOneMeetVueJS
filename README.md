@@ -48,6 +48,7 @@ Each feature below is a self-contained example screen. The bullet links go to a 
 - [Custom Theme](docs/features/custom-theme.md) — switch the 3D lighting theme with `view.setTheme()` and recolor the SDK's own buttons live via `view.accentColor`/`view.textAccentColor`.
 - [Camera Projection](docs/features/camera-projection-toggle.md) — switch between a 3D perspective and a flat orthographic camera by recreating the view with `createView()`'s `cameraProjection` option (read back via `view.cameraProjection`).
 - [Camera Showcase](docs/features/camera-showcase-carousel.md) — an endless automatic camera tour for kiosks, chaining `view.goToFloor()` and `view.goToPOI()` `AnimationPromise`s, pausing on touch and resuming after 10 s idle.
+- [Protected Map (Token)](docs/features/auth-token.md) — code sample (placeholder values, not loaded by the demo) for loading a map from the protected map server with `LoadOptions.authorizationToken`, refreshing it via `venue.setAuthorizationToken()` and detecting `UnauthorizedError`.
 
 ## Structure
 
