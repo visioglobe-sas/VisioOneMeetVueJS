@@ -1827,7 +1827,20 @@ onBeforeUnmount(stopCarousel)
 
 <template>
   <main class="feature">
+    <!-- auth-token is a code sample only (src/components/ProtectedVisioOneMap.vue):
+         this demo has no protected map, so the screen loads no map at all. -->
+    <div v-if="props.slug === 'auth-token'" class="auth-token-sample">
+      <p>
+        {{
+          t('features.authToken.body', {
+            file: 'src/components/ProtectedVisioOneMap.vue',
+            doc: 'docs/features/auth-token.md',
+          })
+        }}
+      </p>
+    </div>
     <VisioOneMap
+      v-else
       :key="mapKey"
       :hash="mapHash"
       :baseURL="effectiveBaseURL"
@@ -2837,6 +2850,19 @@ onBeforeUnmount(stopCarousel)
   position: relative;
   width: 100vw;
   height: 100vh;
+}
+
+.auth-token-sample {
+  box-sizing: border-box;
+  height: 100%;
+  padding: 72px 20px 20px;
+  overflow-y: auto;
+  line-height: 1.5;
+}
+
+.auth-token-sample p {
+  max-width: 640px;
+  margin: 0 auto;
 }
 
 .top-bar {
