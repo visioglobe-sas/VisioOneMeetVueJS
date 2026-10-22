@@ -310,6 +310,17 @@
       },
       "hint": "Switching reloads the map (the projection can only be set when the view is created).",
       "reloading": "Reloading the map…"
+    },
+    "cameraShowcaseCarousel": {
+      "title": "Camera showcase",
+      "description": "Automatic camera tour of the map, for kiosks and lobby screens",
+      "panelTitle": "Camera showcase",
+      "start": "Start",
+      "stop": "Stop",
+      "running": "Running — stop {index}/{total}: {id}",
+      "paused": "Paused — resumes after 10 s without touch",
+      "stopped": "Stopped",
+      "hint": "Touching the map pauses the tour; it resumes on its own after 10 s."
     }
   }
 }

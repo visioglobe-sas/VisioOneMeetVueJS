@@ -1682,6 +1682,147 @@ function resetCustomTheme() {
   selectAccentColor(ACCENT_COLORS[0].value)
   selectTextAccentColor(TEXT_ACCENT_COLORS[0].value)
 }
+
+// camera-showcase-carousel: an endless camera tour (goToFloor then goToPOI,
+// then a dwell) for kiosk/lobby screens. The loop and its state live here at
+// screen level, not in the BottomSheet content, so closing the panel (needed
+// to see the map) does not stop it and there is only ever one loop. Each
+// Start/resume bumps `carouselRun`; a loop whose run id is stale, or whose
+// awaited AnimationPromise reports isCanceled, exits. See
+// docs/features/camera-showcase-carousel.md.
+const CAROUSEL_STOP_IDS = ['B4-UL00-ID0009', 'B1-LL01-ID0152', 'B3-UL00-ID0064', 'B4-UL03-ID0015']
+const CAROUSEL_DWELL_MS = 3000
+const CAROUSEL_RESUME_MS = 10000
+
+const carouselState = ref('stopped') // 'running' | 'paused' | 'stopped'
+const carouselStopIndex = ref(0)
+let carouselRun = 0
+let carouselNextIndex = 0
+let carouselDwellTimer = null
+let carouselResumeTimer = null
+// The AnimationPromise currently in flight (null between hops / while dwelling).
+let carouselAnimation = null
+
+function carouselStops() {
+  const venue = venueRef.value
+  if (!venue) return []
+  return CAROUSEL_STOP_IDS.map((id) => venue.pois.find((poi) => poi.id === id)).filter(Boolean)
+}
+
+function carouselDwell(ms) {
+  return new Promise((resolve) => {
+    carouselDwellTimer = setTimeout(resolve, ms)
+  })
+}
+
+async function runCarousel(run, startIndex) {
+  const view = viewRef.value
+  const stops = carouselStops()
+  if (!view || stops.length === 0) return
+  const stillRunning = (animation) => run === carouselRun && !animation?.isCanceled
+  for (let index = startIndex % stops.length; ; index = (index + 1) % stops.length) {
+    const poi = stops[index]
+    carouselStopIndex.value = index
+    carouselNextIndex = (index + 1) % stops.length
+    // Documented order: bring the POI's floor up first, then frame the POI.
+    if (poi.floor) {
+      const floorAnimation = view.goToFloor(poi.floor, { duration: 800 })
+      carouselAnimation = floorAnimation
+      await floorAnimation
+      carouselAnimation = null
+      if (!stillRunning(floorAnimation)) return
+    }
+    const poiAnimation = view.goToPOI(poi, {
+      duration: 2500,
+      easing: 'easeInOutQuad',
+      orientation: { heading: index * 90, pitch: 30 },
+    })
+    carouselAnimation = poiAnimation
+    await poiAnimation
+    carouselAnimation = null
+    if (!stillRunning(poiAnimation)) return
+    await carouselDwell(CAROUSEL_DWELL_MS)
+    if (run !== carouselRun) return
+  }
+}
+
+function startCarousel(startIndex = 0) {
+  if (!viewRef.value || !venueRef.value) return
+  clearTimeout(carouselResumeTimer)
+  clearTimeout(carouselDwellTimer)
+  carouselState.value = 'running'
+  runCarousel(++carouselRun, startIndex)
+}
+
+// Stop: just stop scheduling. The hop in flight (if any) is left to finish
+// on its own and glides to its destination (cancel() would stop the camera
+// where it is, mid-flight).
+function stopCarousel() {
+  carouselRun++
+  clearTimeout(carouselDwellTimer)
+  clearTimeout(carouselResumeTimer)
+  carouselState.value = 'stopped'
+}
+
+function toggleCarousel() {
+  if (carouselState.value === 'stopped') startCarousel(0)
+  else stopCarousel()
+}
+
+// The SDK does not let a user drag interrupt its own camera animation, and
+// fires no "camera moved by user" event, so the screen listens for
+// pointerdown on the map itself (capture phase) and pauses right away.
+function handleCarouselMapPointerDown() {
+  if (props.slug !== 'camera-showcase-carousel' || carouselState.value === 'stopped') return
+  const view = viewRef.value
+  if (carouselState.value === 'running') {
+    carouselRun++
+    clearTimeout(carouselDwellTimer)
+    carouselState.value = 'paused'
+    // Interrupt the in-flight animation in place: starting a new, zero-length
+    // animation on the camera's current target/heading/pitch resolves the
+    // running one with isCanceled = true and leaves the camera where it is.
+    // (cancel() would also stop it in place; its public typing wrongly says it
+    // puts the target in its final state, but the SDK core implementation and
+    // live measurements say otherwise.) Only done while an animation is
+    // actually running — nothing to interrupt during the dwell.
+    if (view && carouselAnimation) {
+      const { camera } = view
+      carouselAnimation = null
+      view.goToViewpoint(
+        { positions: [camera.target] },
+        { duration: 0, orientation: { heading: camera.heading, pitch: camera.pitch } },
+      )
+    }
+  }
+  // Every further touch while paused restarts the idle countdown.
+  restartCarouselResumeTimer()
+}
+
+// Count the 10 s from the end of the gesture too, so a long drag is never
+// cut short by the tour resuming under the user's finger.
+function handleCarouselMapPointerUp() {
+  if (carouselState.value === 'paused') restartCarouselResumeTimer()
+}
+
+function restartCarouselResumeTimer() {
+  clearTimeout(carouselResumeTimer)
+  carouselResumeTimer = setTimeout(() => startCarousel(carouselNextIndex), CAROUSEL_RESUME_MS)
+}
+
+const carouselStatus = computed(() => {
+  if (carouselState.value === 'running') {
+    return t('features.cameraShowcaseCarousel.running', {
+      index: carouselStopIndex.value + 1,
+      total: CAROUSEL_STOP_IDS.length,
+      id: CAROUSEL_STOP_IDS[carouselStopIndex.value],
+    })
+  }
+  if (carouselState.value === 'paused') return t('features.cameraShowcaseCarousel.paused')
+  return t('features.cameraShowcaseCarousel.stopped')
+})
+
+onBeforeUnmount(stopCarousel)
 </script>
 
 <template>
@@ -1696,6 +1837,8 @@ function resetCustomTheme() {
       @ready="handleReady"
       @error="handleError"
       @poi-click="handlePOIClick"
+      @pointerdown.capture="handleCarouselMapPointerDown"
+      @pointerup.capture="handleCarouselMapPointerUp"
     />
 
     <div class="top-bar">
@@ -1738,7 +1881,8 @@ function resetCustomTheme() {
         props.slug === 'custom-text-label' ||
         props.slug === 'html-overlay-marker' ||
         (props.slug === 'custom-theme' && viewRef) ||
-        props.slug === 'camera-projection-toggle'
+        props.slug === 'camera-projection-toggle' ||
+        props.slug === 'camera-showcase-carousel'
       "
       class="fab"
       :aria-label="t('home.openControls')"
@@ -2637,6 +2781,21 @@ function resetCustomTheme() {
         <div class="poi-panel__entry">
           {{ projectionReloading ? t('features.cameraProjectionToggle.reloading') : t('features.cameraProjectionToggle.hint') }}
         </div>
+      </div>
+
+      <div v-else-if="props.slug === 'camera-showcase-carousel'" class="goto-poi-panel">
+        <h2 class="poi-panel__title">{{ t('features.cameraShowcaseCarousel.panelTitle') }}</h2>
+        <div class="goto-poi-panel__actions">
+          <button class="goto-poi-panel__button" @click="toggleCarousel">
+            {{
+              carouselState === 'stopped'
+                ? t('features.cameraShowcaseCarousel.start')
+                : t('features.cameraShowcaseCarousel.stop')
+            }}
+          </button>
+        </div>
+        <div class="position-panel__status">{{ carouselStatus }}</div>
+        <div class="poi-panel__entry">{{ t('features.cameraShowcaseCarousel.hint') }}</div>
       </div>
 
       <div v-else-if="props.slug === 'custom-base-url'" class="goto-poi-panel">

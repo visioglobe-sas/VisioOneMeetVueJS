@@ -135,4 +135,9 @@ export const features = [
     titleKey: 'features.cameraProjectionToggle.title',
     descriptionKey: 'features.cameraProjectionToggle.description',
   },
+  {
+    slug: 'camera-showcase-carousel',
+    titleKey: 'features.cameraShowcaseCarousel.title',
+    descriptionKey: 'features.cameraShowcaseCarousel.description',
+  },
 ]

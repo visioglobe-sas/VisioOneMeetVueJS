@@ -310,6 +310,17 @@
       },
       "hint": "Changer de projection recharge la carte (la projection ne se choisit qu'à la création de la vue).",
       "reloading": "Rechargement de la carte…"
+    },
+    "cameraShowcaseCarousel": {
+      "title": "Vitrine caméra",
+      "description": "Visite caméra automatique de la carte, pour bornes et écrans d'accueil",
+      "panelTitle": "Vitrine caméra",
+      "start": "Démarrer",
+      "stop": "Arrêter",
+      "running": "En cours — étape {index}/{total} : {id}",
+      "paused": "En pause — reprend après 10 s sans toucher",
+      "stopped": "Arrêtée",
+      "hint": "Toucher la carte met la visite en pause ; elle reprend seule après 10 s."
     }
   }
 }
