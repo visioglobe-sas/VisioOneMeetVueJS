@@ -299,6 +299,17 @@
       },
       "reset": "Réinitialiser",
       "hint": "Touchez un lieu : le bouton « Y aller » de sa fiche utilise les couleurs d'accent."
+    },
+    "cameraProjectionToggle": {
+      "title": "Projection de la caméra",
+      "description": "Basculer entre une vue 3D en perspective et une vue à plat orthographique",
+      "panelTitle": "Projection de la caméra",
+      "projections": {
+        "perspective": "Perspective",
+        "orthographic": "Orthographique"
+      },
+      "hint": "Changer de projection recharge la carte (la projection ne se choisit qu'à la création de la vue).",
+      "reloading": "Rechargement de la carte…"
     }
   }
 }

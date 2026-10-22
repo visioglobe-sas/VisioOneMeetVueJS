@@ -47,9 +47,40 @@ const effectiveBaseURL = computed(() =>
 // it every theme is pixel-identical. Shadows are expensive, so only this
 // screen opts in; every other screen keeps the SDK's default view options.
 // See docs/features/custom-theme.md.
-const mapViewOptions = computed(() => (props.slug === 'custom-theme' ? { enableShadows: true } : {}))
+//
+// camera-projection-toggle: cameraProjection is a createView() option only
+// (view.cameraProjection is read-only, there is no runtime setter). And
+// destroyView + createView on the SAME venue fails in SDK 1.1.0 ("Cannot
+// fetch model", createView never resolves). So switching projection binds
+// the requested value to VisioOneMap's :key: Vue unmounts it (destroyView +
+// unloadVenue) and remounts it (fresh loadVenue + createView with the new
+// cameraProjection). See docs/features/camera-projection-toggle.md.
+const CAMERA_PROJECTIONS = ['perspective', 'orthographic']
+const requestedProjection = ref('perspective')
+const reportedProjection = ref(null)
+const projectionReloading = ref(true)
 
-const mapKey = computed(() => (props.slug === 'custom-base-url' ? appliedBaseURL.value : 'default'))
+const mapViewOptions = computed(() => {
+  if (props.slug === 'custom-theme') return { enableShadows: true }
+  if (props.slug === 'camera-projection-toggle') return { cameraProjection: requestedProjection.value }
+  return {}
+})
+
+const mapKey = computed(() => {
+  if (props.slug === 'custom-base-url') return appliedBaseURL.value
+  if (props.slug === 'camera-projection-toggle') return requestedProjection.value
+  return 'default'
+})
+
+function selectProjection(projection) {
+  if (projectionReloading.value || projection === reportedProjection.value) return
+  projectionReloading.value = true
+  // The old view/venue are being torn down: drop every reference to them so
+  // nothing keeps calling into a destroyed view until the new one is ready.
+  viewRef.value = null
+  venueRef.value = null
+  requestedProjection.value = projection
+}
 
 function reloadWithBaseURL() {
   baseURLError.value = null
@@ -79,6 +110,11 @@ function handleReady({ venue, view }) {
   if (props.slug === 'runtime-locale') initRuntimeLocale()
   if (props.slug === 'native-ui-replacement') initNativeUiReplacement()
   if (props.slug === 'custom-theme') initCustomTheme()
+  if (props.slug === 'camera-projection-toggle') {
+    // Mirror what the SDK actually created, not what was requested.
+    reportedProjection.value = view.cameraProjection
+    projectionReloading.value = false
+  }
   // Subscribed on every screen (cheap, and the SDK fires these on any
   // tracking screen) so the camera-lock toggle always mirrors the SDK state.
   for (const type of CAMERA_LOCK_EVENTS) view.addEventListener(type, syncCameraLock)
@@ -91,6 +127,7 @@ function resetView() {
 
 function handleError(error) {
   console.error('VisioOne error:', error)
+  if (props.slug === 'camera-projection-toggle') projectionReloading.value = false
   if (props.slug === 'custom-base-url') {
     baseURLError.value = error?.message || String(error)
   }
@@ -1700,7 +1737,8 @@ function resetCustomTheme() {
         props.slug === '3d-icon-marker' ||
         props.slug === 'custom-text-label' ||
         props.slug === 'html-overlay-marker' ||
-        (props.slug === 'custom-theme' && viewRef)
+        (props.slug === 'custom-theme' && viewRef) ||
+        props.slug === 'camera-projection-toggle'
       "
       class="fab"
       :aria-label="t('home.openControls')"
@@ -2581,6 +2619,26 @@ function resetCustomTheme() {
         <div class="poi-panel__entry">{{ t('features.customTheme.hint') }}</div>
       </div>
 
+      <div v-else-if="props.slug === 'camera-projection-toggle'" class="goto-poi-panel">
+        <h2 class="poi-panel__title">{{ t('features.cameraProjectionToggle.panelTitle') }}</h2>
+        <div class="explore-mode-panel__segmented">
+          <button
+            v-for="projection in CAMERA_PROJECTIONS"
+            :key="projection"
+            type="button"
+            class="explore-mode-panel__option"
+            :class="{ 'explore-mode-panel__option--active': projection === reportedProjection }"
+            :disabled="projectionReloading"
+            @click="selectProjection(projection)"
+          >
+            {{ t(`features.cameraProjectionToggle.projections.${projection}`) }}
+          </button>
+        </div>
+        <div class="poi-panel__entry">
+          {{ projectionReloading ? t('features.cameraProjectionToggle.reloading') : t('features.cameraProjectionToggle.hint') }}
+        </div>
+      </div>
+
       <div v-else-if="props.slug === 'custom-base-url'" class="goto-poi-panel">
         <input
           v-model="baseURLInput"
@@ -2955,6 +3013,11 @@ function resetCustomTheme() {
 
 .explore-mode-panel__option--active {
   background: #057dbc;
+}
+
+.explore-mode-panel__option:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .itinerary-panel__title {

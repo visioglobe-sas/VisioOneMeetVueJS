@@ -130,4 +130,9 @@ export const features = [
     titleKey: 'features.customTheme.title',
     descriptionKey: 'features.customTheme.description',
   },
+  {
+    slug: 'camera-projection-toggle',
+    titleKey: 'features.cameraProjectionToggle.title',
+    descriptionKey: 'features.cameraProjectionToggle.description',
+  },
 ]

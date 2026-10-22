@@ -299,6 +299,17 @@
       },
       "reset": "Reset",
       "hint": "Tap a place: its card's Go button uses the accent colors."
+    },
+    "cameraProjectionToggle": {
+      "title": "Camera projection",
+      "description": "Switch between a 3D perspective view and a flat orthographic view",
+      "panelTitle": "Camera projection",
+      "projections": {
+        "perspective": "Perspective",
+        "orthographic": "Orthographic"
+      },
+      "hint": "Switching reloads the map (the projection can only be set when the view is created).",
+      "reloading": "Reloading the map…"
     }
   }
 }
