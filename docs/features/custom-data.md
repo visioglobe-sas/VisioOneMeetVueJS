@@ -4,7 +4,7 @@
 
 Reads free-form business key/value data attached to a POI in VisioMapEditor (e.g. price, opening hours, product reference) via `venue.getPOICustomData(poi)`, after loading the venue's `CustomData` from the server with `venue.refreshCustomData()`.
 
-**Note on the map used by this demo screen.** Unlike every other feature in this app, this screen does not load `VITE_VISIOONE_HASH` — it hardcodes a dedicated map hash (`kd9426d8cb3f1c532f22b5bcbd325c280bd351feb`) in `FeatureView.vue`, because the app's shared/default demo map has no `CustomData` published at all, and CustomData has to be authored per-POI in VisioMapEditor for a given map before it can be read here. That dedicated map has confirmed real data on these POI ids:
+**Note on the map used by this demo screen.** Unlike every other feature in this app, this screen does not load `VITE_VISIOONE_HASH` — it hardcodes a dedicated map hash (`kd9426d8cb3f1c532f22b5bcbd325c280bd351feb`) in `src/demoMap.js` (`CUSTOM_DATA_MAP_HASH`), because the app's shared/default demo map has no `CustomData` published at all, and CustomData has to be authored per-POI in VisioMapEditor for a given map before it can be read here. That dedicated map has confirmed real data on these POI ids:
   - `B1` → `{"CSM ID": "BLBLA"}`
   - `B3-UL00-ID0065` → `{"Sensor X": "17718393"}`
   - `B3-UL00-ID0064` → `{"SENSOR": "DDDZEZHJF"}`
