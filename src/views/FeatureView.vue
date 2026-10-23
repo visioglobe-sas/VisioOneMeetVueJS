@@ -3,7 +3,10 @@ import { computed, onBeforeUnmount, ref, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import BottomSheet from '../components/BottomSheet.vue'
+import ColorSwatches from '../components/ColorSwatches.vue'
+import RouteFields from '../components/RouteFields.vue'
 import VisioOneMap from '../components/VisioOneMap.vue'
+import { PALETTE } from '../colors'
 import {
   ACCESSIBLE_FROM,
   ACCESSIBLE_TO,
@@ -25,6 +28,7 @@ import {
   TRACKING_TO,
 } from '../demoMap'
 import { features } from '../features'
+import { findPoi, poiDisplayPosition } from '../sdk/pois'
 
 const props = defineProps({
   slug: { type: String, required: true },
@@ -56,6 +60,8 @@ const mapHash = computed(() => (props.slug === 'custom-data' ? CUSTOM_DATA_MAP_H
 const CUSTOM_BASE_URL_DEFAULT = 'https://mapserver.visioglobe.com/'
 const baseURLInput = ref(visioOneBaseURL || CUSTOM_BASE_URL_DEFAULT)
 const appliedBaseURL = ref(baseURLInput.value)
+// Bumped on every Reload so the map remounts even when the URL is unchanged.
+const baseURLReloadCount = ref(0)
 const baseURLError = ref(null)
 
 const effectiveBaseURL = computed(() =>
@@ -86,7 +92,7 @@ const mapViewOptions = computed(() => {
 })
 
 const mapKey = computed(() => {
-  if (props.slug === 'custom-base-url') return appliedBaseURL.value
+  if (props.slug === 'custom-base-url') return `${appliedBaseURL.value}#${baseURLReloadCount.value}`
   if (props.slug === 'camera-projection-toggle') return requestedProjection.value
   return 'default'
 })
@@ -103,7 +109,12 @@ function selectProjection(projection) {
 
 function reloadWithBaseURL() {
   baseURLError.value = null
+  // Same as selectProjection: the old view/venue are being torn down, so drop
+  // every reference to them until the new map emits 'ready'.
+  viewRef.value = null
+  venueRef.value = null
   appliedBaseURL.value = baseURLInput.value.trim()
+  baseURLReloadCount.value += 1
 }
 
 // shallowRef, not ref: `venue`/`view` are VisioOne SDK class instances. A
@@ -121,8 +132,6 @@ const controlsOpen = ref(false)
 function handleReady({ venue, view }) {
   venueRef.value = venue
   viewRef.value = view
-  console.log('VisioOne venue loaded:', venue)
-  console.log('VisioOne view created:', view)
   if (props.slug === 'custom-base-url') baseURLError.value = null
   if (props.slug === 'floor-selector') initFloorSelector()
   if (props.slug === 'explore-mode') initExploreMode()
@@ -166,7 +175,6 @@ function poiCategories(poi) {
 }
 
 function handlePOIClick(event) {
-  console.log('POI clicked:', event)
   if (props.slug !== 'poi-click') return
   clickedPois.value = event.pois ?? []
   controlsOpen.value = true
@@ -174,11 +182,12 @@ function handlePOIClick(event) {
 
 // Stand-in for a real occupancy sensor feed: cycles a POI's surface through
 // these colors on a timer. See docs/features/occupancy-simulated.md.
-const OCCUPANCY_COLORS = ['#2ECC71', '#F1C40F', '#E74C3C']
+const OCCUPANCY_COLORS = [PALETTE.free, PALETTE.soonBusy, PALETTE.busy]
 const OCCUPANCY_INTERVAL_MS = 2500
 
 const placeId = ref(OCCUPANCY_POI_ID)
 const simulatingOccupancy = ref(false)
+const occupancyNotFound = ref(false)
 let occupancyTimer = null
 let occupancyColorIndex = 0
 // The place ID actually targeted by the running timer — captured at start,
@@ -188,7 +197,7 @@ let simulatingPlaceId = null
 function updateOccupancy(targetPlaceId, color) {
   const venue = venueRef.value
   if (!venue) return
-  const poi = venue.pois.find((p) => p.id === targetPlaceId)
+  const poi = findPoi(venue, targetPlaceId)
   if (!poi) return
   poi.surfaces.forEach((surface) => venue.updateSurface(surface, { color }))
 }
@@ -204,6 +213,8 @@ function toggleOccupancySimulation() {
 function startOccupancySimulation() {
   const targetPlaceId = placeId.value.trim()
   if (!targetPlaceId) return
+  occupancyNotFound.value = !findPoi(venueRef.value, targetPlaceId)
+  if (occupancyNotFound.value) return
 
   simulatingOccupancy.value = true
   simulatingPlaceId = targetPlaceId
@@ -221,8 +232,9 @@ function stopOccupancySimulation() {
   // Reset the POI that was actually being simulated — not whatever `placeId`
   // currently holds, which may have been edited since simulation started.
   if (simulatingPlaceId) {
-    // Reset the surface rather than leaving it stuck on the last simulated color.
-    updateOccupancy(simulatingPlaceId, undefined)
+    // 'initial' is the SDK's sentinel that restores the surface's own map
+    // color (SurfaceUpdateOptions.color); undefined would leave it as is.
+    updateOccupancy(simulatingPlaceId, 'initial')
   }
   simulatingPlaceId = null
   simulatingOccupancy.value = false
@@ -254,7 +266,7 @@ function goToPoi() {
   const targetId = goToPoiId.value.trim()
   if (!targetId) return
 
-  const poi = venue.pois.find((p) => p.id === targetId)
+  const poi = findPoi(venue, targetId)
   if (!poi) {
     goToPoiNotFound.value = true
     return
@@ -263,7 +275,7 @@ function goToPoi() {
 
   clearGoToPoiHighlight()
   highlightedPoi = poi
-  poi.surfaces.forEach((surface) => venue.updateSurface(surface, { selectionColor: '#057DBC' }))
+  poi.surfaces.forEach((surface) => venue.updateSurface(surface, { selectionColor: PALETTE.highlight }))
   focusCameraOnPoi(poi)
 }
 
@@ -280,7 +292,8 @@ function clearGoToPoiHighlight() {
   if (!highlightedPoi) return
   const venue = venueRef.value
   if (venue) {
-    highlightedPoi.surfaces.forEach((surface) => venue.updateSurface(surface, { selectionColor: undefined }))
+    // 'default' restores the view-wide selection color (SurfaceUpdateOptions).
+    highlightedPoi.surfaces.forEach((surface) => venue.updateSurface(surface, { selectionColor: 'default' }))
   }
   highlightedPoi = null
 }
@@ -388,10 +401,9 @@ async function selectExploreMode(mode) {
 }
 
 // Itinerary between two Place IDs, via venue.computeNavigation() + a
-// NavigationTrace made current on the view. Both POIs are resolved through
-// venue.pois.find (same lookup pattern as goto-poi — no venue.getPOIById in
-// the SDK typings) so a typo surfaces as an explicit "not found" message
-// rather than a silent no-op. See docs/features/compute-navigation.md.
+// NavigationTrace made current on the view. Both POIs are resolved with
+// findPoi (no venue.getPOIById in the SDK) so a typo surfaces as an explicit
+// "not found" message rather than a silent no-op. See docs/features/compute-navigation.md.
 // The From/To fields are shared by 4 screens; each opens prefilled with a
 // pair that returns a route on the demo map (see demoMap.js).
 const ITINERARY_DEFAULTS = {
@@ -419,8 +431,8 @@ function computeItinerary(navigationOptions = {}) {
   const destinationId = itineraryDestinationId.value.trim()
   if (!originId || !destinationId) return
 
-  const originPoi = venue.pois.find((p) => p.id === originId)
-  const destinationPoi = venue.pois.find((p) => p.id === destinationId)
+  const originPoi = findPoi(venue, originId)
+  const destinationPoi = findPoi(venue, destinationId)
   if (!originPoi || !destinationPoi) {
     itineraryError.value = t('features.computeNavigation.notFound')
     return
@@ -429,10 +441,9 @@ function computeItinerary(navigationOptions = {}) {
   clearItinerary()
 
   try {
-    // navigationOptions is {} for plain compute-navigation (and
-    // custom-navigation-trace) -- spreading it in changes nothing about that
-    // call. navigation-exclude-modalities is the only caller that ever passes
-    // a non-empty object here (excludedAttributes), see below.
+    // navigationOptions is {} for compute-navigation and
+    // custom-navigation-trace. navigation-exclude-modalities passes
+    // excludedAttributes and accessible-mode passes isAccessible, see below.
     const navigation = venue.computeNavigation({
       origin: originPoi,
       destination: destinationPoi,
@@ -451,10 +462,12 @@ function computeItinerary(navigationOptions = {}) {
 }
 
 function clearItinerary() {
-  const venue = venueRef.value
-  if (venue && currentNavigationTrace) {
-    viewRef.value?.removeCurrentNavigationTrace()
-    venue.removeNavigationTrace(currentNavigationTrace)
+  // removeCurrentNavigationTrace() also unregisters the trace from the venue:
+  // calling venue.removeNavigationTrace() on it afterwards throws
+  // "Cannot remove Navigation as it is unregistered". It throws too when no
+  // trace is current, hence the guard.
+  if (viewRef.value && currentNavigationTrace) {
+    viewRef.value.removeCurrentNavigationTrace()
   }
   currentNavigationTrace = null
   itineraryError.value = ''
@@ -504,7 +517,11 @@ const TRACE_PRESETS = {
     previewOutlineColor: '#FFFFFF',
   },
 }
-const TRACE_PRESET_KEYS = Object.keys(TRACE_PRESETS)
+// One chip per preset, shown in its progress color.
+const TRACE_PRESET_SWATCHES = Object.entries(TRACE_PRESETS).map(([key, preset]) => ({
+  key,
+  value: preset.progressColor,
+}))
 const selectedTracePreset = ref('visioglobeBlue')
 
 // venue.updateNavigationTrace() throws internally (TypeError reading
@@ -540,14 +557,13 @@ function computeStyledItinerary() {
 // above (same idiom as custom-navigation-trace's computeStyledItinerary) —
 // the only difference is the NavigationRequest.excludedAttributes passed
 // through to venue.computeNavigation(). The SDK's own JSDoc for
-// excludedAttributes describes it as e.g. "elevator", but the string value
-// actually tagged on this venue's floor-transition segments (confirmed via
-// SDK/MapEditor source and a sibling venue's routing fixture) is 'lift', not
-// 'elevator'. See docs/features/navigation-exclude-modalities.md.
+// excludedAttributes describes it as e.g. "elevator", but the attribute
+// actually tagged on this venue's floor-transition segments is 'lift' (it is
+// map data, set in VisioMapEditor). See
+// docs/features/navigation-exclude-modalities.md.
 //
-// The toggle only affects the *next* "Itinerary" press -- flipping it never
-// auto-recomputes an already-displayed route, consistent with this app's
-// other toggles (e.g. camera-lock-on-position's lockCameraOnPosition).
+// The toggle only affects the *next* "Itinerary" press: flipping it does not
+// recompute a route already displayed.
 const EXCLUDED_ELEVATOR_ATTRIBUTE = 'lift'
 const excludeElevator = ref(false)
 
@@ -564,19 +580,11 @@ function computeItineraryExcludingModalities() {
 // idiom as navigation-exclude-modalities right above) -- the only difference
 // is the NavigationRequest.isAccessible flag passed through to
 // venue.computeNavigation(). Per the SDK's own JSDoc, isAccessible: true
-// makes the routing algorithm only use "accessible" route -- internally
-// (confirmed by reading VisioOneImplementation/Venue/NavigationInteractor.ts
-// in the SDK source) this excludes the venue's own published
-// accessibleRouteAttributes/accessibleRouteModalities lists (venue-defined in
-// VisioMapEditor, read from applicationParameters.routingParams -- there is
-// no public getter for them on Venue.d.ts), the same excludedAttributes/
-// excludedModalities mechanism navigation-exclude-modalities drives manually
-// above, just pre-filled by the SDK instead of hand-picked here. Confirmed
-// live against the shared demo venue: this venue's accessible-route
-// exclusion set is (at least) 'stairway' -- computeNavigation({...,
-// isAccessible: true}) between B4-UL00-ID0010 and B4-UL01-ID0014 reroutes the
-// default stairway ('stairway'/'B4-stairs2') segment through the lift
-// ('lift'/'B4-lift1') instead. See docs/features/accessible-mode.md.
+// makes the routing algorithm only use "accessible" routes: which segments
+// count as non-accessible is map data, defined per venue in VisioMapEditor
+// (there is no public getter for it). On the demo map, the ACCESSIBLE_FROM ->
+// ACCESSIBLE_TO route takes stairs by default and the lift with
+// isAccessible: true. See docs/features/accessible-mode.md.
 //
 // The toggle only affects the *next* "Itinerary" press, same convention as
 // excludeElevator above.
@@ -591,10 +599,9 @@ function computeItineraryAccessible() {
 }
 
 // Selective UI masking: toggles one of the SDK's own default UI overlays via
-// view.setUIPartVisible(uiPart, isVisible) — called directly on the live
-// `view` instance, no bridge needed (this is the one platform where the app
-// talks to the SDK object directly). The 5 UIPart values below are exact and
-// case-sensitive (VisioOne SDK, View.ts) — no others exist. All default to
+// view.setUIPartVisible(uiPart, isVisible), called directly on the live
+// `view` instance. The 5 UIPart values below are exact and case-sensitive
+// (UIPart in the SDK typings, View.d.ts); no others exist. All default to
 // visible, matching the SDK's own default (nothing is hidden until a switch
 // is flipped). See docs/features/ui-part-visibility.md.
 const UI_PARTS = ['floorSelector', 'navigation', 'poiDetails', 'search', 'userTracking']
@@ -609,10 +616,9 @@ function toggleUIPart(uiPart) {
 }
 
 // Simulated tracked position: walks a dot + accuracy circle back and forth
-// between two Place IDs, via view.injectTrackedPosition() (no bridge, same
-// direct-SDK-call pattern as the rest of this file). Neither POI carries a
-// lat/lng field directly — it's read off its first marker/label/image, which
-// all carry a Position in the same shape injectTrackedPosition expects. See
+// between two Place IDs, via view.injectTrackedPosition(). A POI has no
+// lat/lng field of its own: poiDisplayPosition (src/sdk/pois.js) reads it off
+// the POI's label, image, marker or surface. See
 // docs/features/simulated-position.md.
 const POSITION_INTERVAL_MS = 150
 // Fraction of the origin->destination segment advanced per tick (~150ms *
@@ -621,8 +627,8 @@ const POSITION_STEP = 0.02
 
 const isAccuracyCircleStyle = props.slug === 'accuracy-circle-style'
 // The 4 tracking screens open prefilled with the same From/To pair (see
-// demoMap.js); accuracy-circle-style starts at a slightly larger radius so
-// the recolored circle is easy to see.
+// demoMap.js); accuracy-circle-style uses a slightly larger radius so the
+// recolored circle is easy to see.
 const originPoiId = ref(TRACKING_FROM)
 const destinationPoiId = ref(TRACKING_TO)
 const positionError = ref('')
@@ -637,14 +643,6 @@ let positionOrigin = null
 let positionDestination = null
 let positionProgress = 0
 let positionDirection = 1
-
-function resolvePoiPosition(id) {
-  const venue = venueRef.value
-  if (!venue) return null
-  const poi = venue.pois.find((p) => p.id === id)
-  if (!poi) return null
-  return poi.markers?.[0]?.position ?? poi.labels?.[0]?.position ?? poi.images?.[0]?.position ?? null
-}
 
 function lerpPosition(from, to, progress) {
   return {
@@ -662,19 +660,20 @@ function toggleSimulatedPosition() {
   }
 }
 
+// Returns whether the simulation actually started.
 function startSimulatedPosition() {
   const view = viewRef.value
-  if (!view) return
+  if (!view) return false
 
   const originId = originPoiId.value.trim()
   const destinationId = destinationPoiId.value.trim()
-  if (!originId || !destinationId) return
+  if (!originId || !destinationId) return false
 
-  const origin = resolvePoiPosition(originId)
-  const destination = resolvePoiPosition(destinationId)
+  const origin = poiDisplayPosition(findPoi(venueRef.value, originId))
+  const destination = poiDisplayPosition(findPoi(venueRef.value, destinationId))
   if (!origin || !destination) {
     positionError.value = t('features.simulatedPosition.notFound')
-    return
+    return false
   }
   positionError.value = ''
 
@@ -695,6 +694,7 @@ function startSimulatedPosition() {
   simulatingPosition.value = true
   injectSimulatedPositionTick()
   positionTimer = setInterval(injectSimulatedPositionTick, POSITION_INTERVAL_MS)
+  return true
 }
 
 function injectSimulatedPositionTick() {
@@ -773,10 +773,10 @@ function toggleCameraLock(event) {
 // There is no getter, so the selection is tracked here. See
 // docs/features/accuracy-circle-style.md.
 const TRACKER_COLORS = [
-  { key: 'default', value: '#0094f0' },
-  { key: 'red', value: '#e53935' },
-  { key: 'green', value: '#43a047' },
-  { key: 'purple', value: '#8e24aa' },
+  { key: 'default', value: PALETTE.blue },
+  { key: 'red', value: PALETTE.red },
+  { key: 'green', value: PALETTE.green },
+  { key: 'purple', value: PALETTE.purple },
 ]
 const DEFAULT_TRACKER_OPACITY = 0.3
 const trackerColor = ref(TRACKER_COLORS[0].value)
@@ -809,13 +809,13 @@ function selectTrackerColor(color) {
 // Entering the zone recolors its surface(s) via venue.updateSurface(), same
 // call as clickable-surface/category-highlight; leaving reverts it. See
 // docs/features/geofencing.md.
-const GEOFENCE_ALERT_COLOR = '#E74C3C'
+const GEOFENCE_ALERT_COLOR = PALETTE.busy
 const zonePoiId = ref(GEOFENCE_ZONE_ID)
 const geofenceZoneNotFound = ref(false)
 const geofenceNoSurface = ref(false)
 const insideGeofence = ref(false)
-// The zone POI's surfaces actually recolored — captured at Start, not
-// re-read from the input on Stop, same pattern as clickableSurfacePoi above.
+// The zone POI's surfaces actually recolored: captured at Start, not re-read
+// from the input on Stop (same pattern as highlightedPoi for goto-poi).
 let geofenceZoneSurfaces = null
 
 function pointInPolygon(point, positions) {
@@ -855,7 +855,7 @@ function startGeofencing() {
   const targetId = zonePoiId.value.trim()
   if (!targetId) return
 
-  const poi = venue.pois.find((p) => p.id === targetId)
+  const poi = findPoi(venue, targetId)
   if (!poi) {
     geofenceZoneNotFound.value = true
     geofenceNoSurface.value = false
@@ -868,10 +868,11 @@ function startGeofencing() {
   }
   geofenceZoneNotFound.value = false
   geofenceNoSurface.value = false
+  // Armed before Start (its first tick already checks the zone), disarmed
+  // again if the simulation could not start (unknown From/To).
   geofenceZoneSurfaces = poi.surfaces
   insideGeofence.value = false
-
-  startSimulatedPosition()
+  if (!startSimulatedPosition()) geofenceZoneSurfaces = null
 }
 
 function stopGeofencing() {
@@ -912,8 +913,10 @@ function setClickableSurfaceInteractive(poi, interactive) {
     venue.updateSurface(
       surface,
       interactive
-        ? { isInteractive: true, color: '#2ECC71', hoverColor: '#F1C40F', selectionColor: '#E74C3C' }
-        : { isInteractive: false, color: 'initial' },
+        ? { isInteractive: true, color: PALETTE.free, hoverColor: PALETTE.soonBusy, selectionColor: PALETTE.busy }
+        : // 'initial' / 'default' restore the map color and the view-wide
+          // hover/selection colors (SurfaceUpdateOptions).
+          { isInteractive: false, color: 'initial', hoverColor: 'default', selectionColor: 'default' },
     ),
   )
 }
@@ -925,7 +928,7 @@ function enableClickableSurface() {
   const targetId = clickableSurfacePlaceId.value.trim()
   if (!targetId) return
 
-  const poi = venue.pois.find((p) => p.id === targetId)
+  const poi = findPoi(venue, targetId)
   if (!poi) {
     clickableSurfaceNotFound.value = true
     return
@@ -992,7 +995,7 @@ async function loadCustomData() {
       console.warn('refreshCustomData failed (likely no CustomData published for this venue):', error)
     }
 
-    const poi = venue.pois.find((p) => p.id === targetId)
+    const poi = findPoi(venue, targetId)
     if (!poi) {
       customDataNotFound.value = true
       return
@@ -1108,18 +1111,6 @@ let trackedLabel = null
 const trackedPoiId = ref('')
 const trackedLabelText = ref('')
 
-function resolveAnchorPosition(anchor, excludeLabel = null, excludeMarker = null) {
-  // Whichever visual element exists first — a label or a marker — carries a
-  // Position in the same WGS84 shape createLabel expects. `excludeLabel`
-  // skips a label we added ourselves (custom-text-label): on an anchor with
-  // no label of its own, it would otherwise be labels[0] and a re-place
-  // would copy its already-offset position. `excludeMarker` does the same
-  // for a marker we added ourselves (html-overlay-marker).
-  const label = anchor.labels?.find((l) => l !== excludeLabel)
-  const marker = anchor.markers?.find((m) => m !== excludeMarker)
-  return label?.position ?? marker?.position ?? null
-}
-
 function createDynamicPoi() {
   const venue = venueRef.value
   if (!venue || trackedPoi) return
@@ -1130,13 +1121,13 @@ function createDynamicPoi() {
   const anchorId = anchorPoiId.value.trim()
   if (!id || !anchorId) return
 
-  const anchor = venue.pois.find((p) => p.id === anchorId)
+  const anchor = findPoi(venue, anchorId)
   if (!anchor) {
     dynamicPoiErrorKey.value = 'features.dynamicPoiCrud.anchorNotFound'
     return
   }
 
-  const position = resolveAnchorPosition(anchor)
+  const position = poiDisplayPosition(anchor)
   if (!position) {
     dynamicPoiErrorKey.value = 'features.dynamicPoiCrud.anchorNoPosition'
     return
@@ -1187,15 +1178,14 @@ function removeDynamicPoi() {
 
 // 3D icon marker: venue.createImage() places an Image — a picture sized in
 // meters, living in the 3D scene — owned by an existing POI (the "anchor"
-// itself, no createPOI needed) at that POI's own position, copied with the
-// same resolveAnchorPosition() helper as dynamic-poi-crud above (not a
-// copy). orientationType picks how it behaves relative to the camera:
+// itself, no createPOI needed) at that POI's own position (poiDisplayPosition,
+// same as dynamic-poi-crud above). orientationType picks how it behaves relative to the camera:
 // 'fixed' (flat on the ground, fixed heading), 'flat' (flat on the ground,
 // turning to face the camera) or 'facing' (always camera-facing billboard).
 // Changing it while an image is placed goes through venue.updateImage() live.
 // Only one image at a time: placing again removes the previous one first.
 // See docs/features/3d-icon-marker.md.
-// 96x96 PNG (blue disc + white star), identical on all VisioOneMeet platforms.
+// 96x96 PNG (blue disc + white star), inlined as a data URL.
 const ICON_DATA_URL =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAACBklEQVR42u3dWW4CMRBFUVbLarOn5JsIqRlsv6FuSfmE0O+IwS7bfbtR1GXdf34/+qMOhg2KcehgGIU+HsMt+DEQ7sHXQqQFXwWRHn4sQkvwkRCt4dsjtAdvDTEtfCuEqeFbIAgv/H/NQzAKfx6CYfhzEIzD70cQf+FFAGxFAEAIEBJ+J4LB7+04gKUIAAgBTEackQBfI4SG34MAgBDAaMIrHuAjBACEAGZTvhUAbyEAIAQwbHrUALyEAAAAcwGMe68V4V8iHAjJHeAI7mqAb0oNcOK1vwYgCP+di1E/334EMcDVRSmewx5gd60COPk6K94Bzy7u1OP4CAqrNQCCQdJ4gAcE0Uh1dPgrASYirB0Ri+dsRoa/A6AdYt+ckNksZn3wpwDSIc7NiprP69cFrwJwBdH3BUo6YLlN+qI2ZGZ7EgAA+AgqD99/ueKA8K0Q0veAxSMk7v+tQnABULQrvQZhQgBVv9gCQb00cXVoUQgOa0MBEALsCitvFlSEMBpAvT9gd0g5TRgATAGMe8Ru/ydul+TJULIBNiGMBlDvlFcE4rkGSISgCsICwOG0FGUIuQDCdaM121ydTs1S/wrJDP8gQN3pu44nJzo1RXLC56h6Ts4FAAROUCd8ELiLBuGDwJ2UCB8E7qhH8BMR4orgQZgdfjJEbRE8ELODd8KgBBjUQRSKuqo/fm7G7BpJ/VcAAAAASUVORK5CYII='
 const ICON_SIZE_METERS = 6
@@ -1222,13 +1212,14 @@ function placeIcon() {
 
   iconErrorKey.value = ''
   const anchorId = iconAnchorPoiId.value.trim()
-  const anchor = venue.pois.find((p) => p.id === anchorId)
+  const anchor = findPoi(venue, anchorId)
   if (!anchor) {
     iconErrorKey.value = 'features.iconMarker3d.poiNotFound'
     return
   }
 
-  const position = resolveAnchorPosition(anchor)
+  // Ignore our own current image, if any (it sits at the same spot anyway).
+  const position = poiDisplayPosition(anchor, [placedIcon])
   if (!position) {
     iconErrorKey.value = 'features.iconMarker3d.poiNoPosition'
     return
@@ -1263,20 +1254,20 @@ function handleRemoveIcon() {
 
 // Custom text label: venue.createLabel() places free text (opening hours,
 // price, zone name...) owned by an existing POI (the "anchor", no createPOI
-// needed), at the anchor's position copied with the same
-// resolveAnchorPosition() helper as dynamic-poi-crud / 3d-icon-marker, then
-// nudged ~4 m so it doesn't overlap the map's own label. Color and size are
+// needed), at the anchor's position (poiDisplayPosition, same as
+// dynamic-poi-crud / 3d-icon-marker), then nudged ~4 m so it doesn't overlap the map's own label. Color and size are
 // restyled live with venue.updateLabel() — width AND height always sent
 // together, since width alone also resets height to width. `rotation` is
 // only part of LabelCreateOptions, not LabelUpdateOptions, so changing it
 // removes the label and recreates it. Only one label at a time. See
 // docs/features/custom-text-label.md.
-const TEXT_LABEL_POSITION_OFFSET = 0.00004
+// ~4 m in latitude and longitude, also used by html-overlay-marker.
+const ANCHOR_OFFSET_DEGREES = 0.00004
 const TEXT_LABEL_COLORS = [
-  { key: 'red', value: '#E53935' },
-  { key: 'green', value: '#43A047' },
-  { key: 'blue', value: '#1E88E5' },
-  { key: 'dark', value: '#212121' },
+  { key: 'red', value: PALETTE.red },
+  { key: 'green', value: PALETTE.green },
+  { key: 'blue', value: PALETTE.blue },
+  { key: 'dark', value: PALETTE.dark },
 ]
 const TEXT_LABEL_SIZES = {
   small: { width: 10, height: 2 },
@@ -1319,14 +1310,14 @@ function placeTextLabel() {
   }
 
   const anchorId = textLabelAnchorPoiId.value.trim()
-  const anchor = venue.pois.find((p) => p.id === anchorId)
+  const anchor = findPoi(venue, anchorId)
   if (!anchor) {
     textLabelErrorKey.value = 'features.customTextLabel.poiNotFound'
     return
   }
 
   // Ignore our own current label, so re-placing doesn't stack the offset.
-  const anchorPosition = resolveAnchorPosition(anchor, placedTextLabel)
+  const anchorPosition = poiDisplayPosition(anchor, [placedTextLabel])
   if (!anchorPosition) {
     textLabelErrorKey.value = 'features.customTextLabel.poiNoPosition'
     return
@@ -1335,8 +1326,8 @@ function placeTextLabel() {
   removeTextLabel()
   const position = {
     ...anchorPosition,
-    latitude: anchorPosition.latitude + TEXT_LABEL_POSITION_OFFSET,
-    longitude: anchorPosition.longitude + TEXT_LABEL_POSITION_OFFSET,
+    latitude: anchorPosition.latitude + ANCHOR_OFFSET_DEGREES,
+    longitude: anchorPosition.longitude + ANCHOR_OFFSET_DEGREES,
   }
   const { width, height } = TEXT_LABEL_SIZES[textLabelSize.value]
   placedTextLabel = venue.createLabel({
@@ -1399,9 +1390,8 @@ function handleRemoveTextLabel() {
 // the map at a WGS84 position, owned by an existing POI (the "anchor"). Unlike
 // a Label/Image it is not part of the 3D scene: it always faces the screen,
 // is never hidden by 3D geometry, and — the point of this demo — can receive
-// clicks. Position: same resolveAnchorPosition() helper as custom-text-label
-// (excluding our own badge, which gets appended to anchor.markers), same ~4 m
-// offset. The SDK owns the element's position/transform/z-index and forces
+// clicks. Position: poiDisplayPosition, same as custom-text-label (excluding
+// our own badge, which gets appended to anchor.markers), same ~4 m offset. The SDK owns the element's position/transform/z-index and forces
 // pointer-events:none at creation, so it's set back to 'auto' right after.
 // Text updates are plain DOM edits (MarkerUpdateOptions only has position and
 // isVisible). Only one badge at a time. See docs/features/html-overlay-marker.md.
@@ -1413,7 +1403,7 @@ const overlayMarkerAnchorPoiId = ref(ANCHOR_POI_ID)
 const overlayMarkerText = ref(t('features.htmlOverlayMarker.defaultText'))
 const overlayMarkerVisible = ref(true)
 const overlayMarkerTapCount = ref(0)
-// Single status line: either an error key, or a { key, params } message.
+// Single status line: { key, params, error } (error = shown in red).
 const overlayMarkerStatus = ref({ key: 'features.htmlOverlayMarker.none', params: {}, error: false })
 // Same split as placedTextLabel/placedTextLabelPoiId above: the SDK Marker
 // instance is a module-local, its owner POI id mirrored into a ref.
@@ -1454,14 +1444,14 @@ function placeOverlayMarker() {
   }
 
   const anchorId = overlayMarkerAnchorPoiId.value.trim()
-  const anchor = venue.pois.find((p) => p.id === anchorId)
+  const anchor = findPoi(venue, anchorId)
   if (!anchor) {
     setOverlayMarkerStatus('features.htmlOverlayMarker.poiNotFound', {}, true)
     return
   }
 
   // Ignore our own current badge, so re-placing doesn't stack the offset.
-  const anchorPosition = resolveAnchorPosition(anchor, null, placedOverlayMarker)
+  const anchorPosition = poiDisplayPosition(anchor, [placedOverlayMarker])
   if (!anchorPosition) {
     setOverlayMarkerStatus('features.htmlOverlayMarker.poiNoPosition', {}, true)
     return
@@ -1470,8 +1460,8 @@ function placeOverlayMarker() {
   removeOverlayMarker()
   const position = {
     ...anchorPosition,
-    latitude: anchorPosition.latitude + TEXT_LABEL_POSITION_OFFSET,
-    longitude: anchorPosition.longitude + TEXT_LABEL_POSITION_OFFSET,
+    latitude: anchorPosition.latitude + ANCHOR_OFFSET_DEGREES,
+    longitude: anchorPosition.longitude + ANCHOR_OFFSET_DEGREES,
   }
   const element = document.createElement('div')
   element.textContent = text
@@ -1652,30 +1642,38 @@ async function switchToSpanish() {
 // only, visible because this screen's view is created with enableShadows
 // (see mapViewOptions above). view.accentColor / view.textAccentColor are
 // plain settable properties that recolor the SDK's own UI buttons (POI card
-// "Go", "Add a step"...) live. The SDK has no current-theme getter, so the
-// selection is tracked here. See docs/features/custom-theme.md.
+// "Go", "Add a step"...) live; both are also readable, so their initial
+// values are read from the view on load. The SDK has no current-theme getter,
+// so the selected theme is tracked here. See docs/features/custom-theme.md.
 const DEFAULT_THEME = 'day'
 const ACCENT_COLORS = [
-  { key: 'blue', value: '#0094F0' },
-  { key: 'red', value: '#E53935' },
-  { key: 'green', value: '#43A047' },
-  { key: 'purple', value: '#8E24AA' },
+  { key: 'blue', value: PALETTE.blue },
+  { key: 'red', value: PALETTE.red },
+  { key: 'green', value: PALETTE.green },
+  { key: 'purple', value: PALETTE.purple },
 ]
 const TEXT_ACCENT_COLORS = [
-  { key: 'white', value: '#FFFFFF' },
-  { key: 'yellow', value: '#FFEB3B' },
-  { key: 'black', value: '#212121' },
+  { key: 'white', value: PALETTE.white },
+  { key: 'yellow', value: PALETTE.yellow },
+  { key: 'black', value: PALETTE.dark },
 ]
 
 const availableThemes = ref([])
 const currentTheme = ref(DEFAULT_THEME)
 const accentColor = ref(ACCENT_COLORS[0].value)
 const textAccentColor = ref(TEXT_ACCENT_COLORS[0].value)
+// The view's own accent colors at load, restored by Reset.
+let initialAccentColor = ACCENT_COLORS[0].value
+let initialTextAccentColor = TEXT_ACCENT_COLORS[0].value
 
 function initCustomTheme() {
   const view = viewRef.value
   if (!view) return
   availableThemes.value = [...view.themes]
+  initialAccentColor = view.accentColor || initialAccentColor
+  initialTextAccentColor = view.textAccentColor || initialTextAccentColor
+  accentColor.value = initialAccentColor
+  textAccentColor.value = initialTextAccentColor
 }
 
 function selectTheme(themeId) {
@@ -1702,8 +1700,8 @@ function selectTextAccentColor(value) {
 
 function resetCustomTheme() {
   selectTheme(DEFAULT_THEME)
-  selectAccentColor(ACCENT_COLORS[0].value)
-  selectTextAccentColor(TEXT_ACCENT_COLORS[0].value)
+  selectAccentColor(initialAccentColor)
+  selectTextAccentColor(initialTextAccentColor)
 }
 
 // camera-showcase-carousel: an endless camera tour (goToFloor then goToPOI,
@@ -1728,7 +1726,7 @@ let carouselAnimation = null
 function carouselStops() {
   const venue = venueRef.value
   if (!venue) return []
-  return CAROUSEL_STOP_IDS.map((id) => venue.pois.find((poi) => poi.id === id)).filter(Boolean)
+  return CAROUSEL_STOP_IDS.map((id) => findPoi(venue, id)).filter(Boolean)
 }
 
 function carouselDwell(ms) {
@@ -1804,9 +1802,8 @@ function handleCarouselMapPointerDown() {
     // Interrupt the in-flight animation in place: starting a new, zero-length
     // animation on the camera's current target/heading/pitch resolves the
     // running one with isCanceled = true and leaves the camera where it is.
-    // (cancel() would also stop it in place; its public typing wrongly says it
-    // puts the target in its final state, but the SDK core implementation and
-    // live measurements say otherwise.) Only done while an animation is
+    // (cancel() would also stop it in place; its public typing says it puts
+    // the target in its final state, but measured live it does not.) Only done while an animation is
     // actually running — nothing to interrupt during the dwell.
     if (view && carouselAnimation) {
       const { camera } = view
@@ -1940,6 +1937,9 @@ onBeforeUnmount(stopCarousel)
         <button class="occupancy-panel__button" @click="toggleOccupancySimulation">
           {{ simulatingOccupancy ? t('features.occupancySimulated.stop') : t('features.occupancySimulated.start') }}
         </button>
+        <div v-if="occupancyNotFound" class="goto-poi-panel__error">
+          {{ t('features.occupancySimulated.notFound') }}
+        </div>
       </div>
 
       <div v-else-if="props.slug === 'poi-click'" class="poi-panel">
@@ -1976,6 +1976,8 @@ onBeforeUnmount(stopCarousel)
         </div>
       </div>
 
+      <!-- Building, floor and theme buttons show the SDK's raw ids (map data,
+           not translatable app strings). -->
       <div v-else-if="props.slug === 'floor-selector'" class="floor-panel">
         <h2 class="floor-panel__title">{{ t('features.floorSelector.panelTitle') }}</h2>
 
@@ -2026,16 +2028,10 @@ onBeforeUnmount(stopCarousel)
 
       <div v-else-if="props.slug === 'compute-navigation'" class="itinerary-panel">
         <h2 class="itinerary-panel__title">{{ t('features.computeNavigation.panelTitle') }}</h2>
-        <input
-          v-model="itineraryOriginId"
-          class="itinerary-panel__input"
-          :placeholder="t('features.computeNavigation.fromPlaceholder')"
-        />
-        <input
-          v-model="itineraryDestinationId"
-          class="itinerary-panel__input"
-          :placeholder="t('features.computeNavigation.toPlaceholder')"
-          @keyup.enter="computeItinerary()"
+        <RouteFields
+          v-model:from="itineraryOriginId"
+          v-model:to="itineraryDestinationId"
+          @submit="computeItinerary()"
         />
         <div class="itinerary-panel__actions">
           <button class="itinerary-panel__button" @click="computeItinerary()">
@@ -2052,16 +2048,10 @@ onBeforeUnmount(stopCarousel)
 
       <div v-else-if="props.slug === 'custom-navigation-trace'" class="itinerary-panel">
         <h2 class="itinerary-panel__title">{{ t('features.customNavigationTrace.panelTitle') }}</h2>
-        <input
-          v-model="itineraryOriginId"
-          class="itinerary-panel__input"
-          :placeholder="t('features.computeNavigation.fromPlaceholder')"
-        />
-        <input
-          v-model="itineraryDestinationId"
-          class="itinerary-panel__input"
-          :placeholder="t('features.computeNavigation.toPlaceholder')"
-          @keyup.enter="computeStyledItinerary"
+        <RouteFields
+          v-model:from="itineraryOriginId"
+          v-model:to="itineraryDestinationId"
+          @submit="computeStyledItinerary"
         />
         <div class="itinerary-panel__actions">
           <button class="itinerary-panel__button" @click="computeStyledItinerary">
@@ -2078,35 +2068,21 @@ onBeforeUnmount(stopCarousel)
         <h2 class="itinerary-panel__title trace-style-panel__title">
           {{ t('features.customNavigationTrace.styleTitle') }}
         </h2>
-        <div class="trace-style-panel__swatches">
-          <button
-            v-for="presetKey in TRACE_PRESET_KEYS"
-            :key="presetKey"
-            type="button"
-            class="trace-style-panel__swatch"
-            :class="{ 'trace-style-panel__swatch--active': presetKey === selectedTracePreset }"
-            :style="{ background: TRACE_PRESETS[presetKey].progressColor }"
-            :aria-label="t(`features.customNavigationTrace.presets.${presetKey}`)"
-            @click="applyTracePreset(presetKey)"
-          />
-        </div>
-        <div class="trace-style-panel__label">
-          {{ t(`features.customNavigationTrace.presets.${selectedTracePreset}`) }}
-        </div>
+        <ColorSwatches
+          :colors="TRACE_PRESET_SWATCHES"
+          :selected="TRACE_PRESETS[selectedTracePreset].progressColor"
+          label-prefix="features.customNavigationTrace.presets"
+          show-selected-label
+          @select="applyTracePreset($event.key)"
+        />
       </div>
 
       <div v-else-if="props.slug === 'navigation-exclude-modalities'" class="itinerary-panel">
         <h2 class="itinerary-panel__title">{{ t('features.navigationExcludeModalities.panelTitle') }}</h2>
-        <input
-          v-model="itineraryOriginId"
-          class="itinerary-panel__input"
-          :placeholder="t('features.computeNavigation.fromPlaceholder')"
-        />
-        <input
-          v-model="itineraryDestinationId"
-          class="itinerary-panel__input"
-          :placeholder="t('features.computeNavigation.toPlaceholder')"
-          @keyup.enter="computeItineraryExcludingModalities"
+        <RouteFields
+          v-model:from="itineraryOriginId"
+          v-model:to="itineraryDestinationId"
+          @submit="computeItineraryExcludingModalities"
         />
         <label class="ui-part-panel__row navigation-exclude-modalities-panel__toggle">
           <span class="ui-part-panel__label">{{ t('features.navigationExcludeModalities.toggleLabel') }}</span>
@@ -2132,16 +2108,10 @@ onBeforeUnmount(stopCarousel)
 
       <div v-else-if="props.slug === 'accessible-mode'" class="itinerary-panel">
         <h2 class="itinerary-panel__title">{{ t('features.accessibleMode.panelTitle') }}</h2>
-        <input
-          v-model="itineraryOriginId"
-          class="itinerary-panel__input"
-          :placeholder="t('features.computeNavigation.fromPlaceholder')"
-        />
-        <input
-          v-model="itineraryDestinationId"
-          class="itinerary-panel__input"
-          :placeholder="t('features.computeNavigation.toPlaceholder')"
-          @keyup.enter="computeItineraryAccessible"
+        <RouteFields
+          v-model:from="itineraryOriginId"
+          v-model:to="itineraryDestinationId"
+          @submit="computeItineraryAccessible"
         />
         <label class="ui-part-panel__row accessible-mode-panel__toggle">
           <span class="ui-part-panel__label">{{ t('features.accessibleMode.toggleLabel') }}</span>
@@ -2180,16 +2150,7 @@ onBeforeUnmount(stopCarousel)
 
       <div v-else-if="props.slug === 'simulated-position'" class="position-panel">
         <h2 class="position-panel__title">{{ t('features.simulatedPosition.panelTitle') }}</h2>
-        <input
-          v-model="originPoiId"
-          class="position-panel__input"
-          :placeholder="t('features.simulatedPosition.fromPlaceholder')"
-        />
-        <input
-          v-model="destinationPoiId"
-          class="position-panel__input"
-          :placeholder="t('features.simulatedPosition.toPlaceholder')"
-        />
+        <RouteFields v-model:from="originPoiId" v-model:to="destinationPoiId" />
         <label class="position-panel__radius">
           <span>{{ t('features.simulatedPosition.radiusLabel') }}: {{ accuracyRadius }} m</span>
           <input
@@ -2211,16 +2172,7 @@ onBeforeUnmount(stopCarousel)
 
       <div v-else-if="props.slug === 'camera-lock-on-position'" class="position-panel">
         <h2 class="position-panel__title">{{ t('features.cameraLockOnPosition.panelTitle') }}</h2>
-        <input
-          v-model="originPoiId"
-          class="position-panel__input"
-          :placeholder="t('features.simulatedPosition.fromPlaceholder')"
-        />
-        <input
-          v-model="destinationPoiId"
-          class="position-panel__input"
-          :placeholder="t('features.simulatedPosition.toPlaceholder')"
-        />
+        <RouteFields v-model:from="originPoiId" v-model:to="destinationPoiId" />
         <label class="position-panel__radius">
           <span>{{ t('features.simulatedPosition.radiusLabel') }}: {{ accuracyRadius }} m</span>
           <input
@@ -2255,16 +2207,7 @@ onBeforeUnmount(stopCarousel)
 
       <div v-else-if="props.slug === 'accuracy-circle-style'" class="position-panel">
         <h2 class="position-panel__title">{{ t('features.accuracyCircleStyle.panelTitle') }}</h2>
-        <input
-          v-model="originPoiId"
-          class="position-panel__input"
-          :placeholder="t('features.simulatedPosition.fromPlaceholder')"
-        />
-        <input
-          v-model="destinationPoiId"
-          class="position-panel__input"
-          :placeholder="t('features.simulatedPosition.toPlaceholder')"
-        />
+        <RouteFields v-model:from="originPoiId" v-model:to="destinationPoiId" />
         <label class="position-panel__radius">
           <span>{{ t('features.simulatedPosition.radiusLabel') }}: {{ accuracyRadius }} m</span>
           <input
@@ -2277,19 +2220,13 @@ onBeforeUnmount(stopCarousel)
           />
         </label>
         <div class="explore-mode-panel__title">{{ t('features.accuracyCircleStyle.colorLabel') }}</div>
-        <div class="explore-mode-panel__segmented">
-          <button
-            v-for="color in TRACKER_COLORS"
-            :key="color.key"
-            type="button"
-            class="explore-mode-panel__option accuracy-style-panel__option"
-            :class="{ 'explore-mode-panel__option--active': color.value === trackerColor }"
-            @click="selectTrackerColor(color.value)"
-          >
-            <span class="accuracy-style-panel__dot" :style="{ background: color.value }" />
-            {{ t(`features.accuracyCircleStyle.colors.${color.key}`) }}
-          </button>
-        </div>
+        <ColorSwatches
+          :colors="TRACKER_COLORS"
+          :selected="trackerColor"
+          label-prefix="features.accuracyCircleStyle.colors"
+          show-selected-label
+          @select="selectTrackerColor($event.value)"
+        />
         <label class="position-panel__radius">
           <span>{{ t('features.accuracyCircleStyle.opacityLabel') }}: {{ trackerOpacity.toFixed(1) }}</span>
           <input
@@ -2316,16 +2253,7 @@ onBeforeUnmount(stopCarousel)
           class="position-panel__input"
           :placeholder="t('features.geofencing.zonePlaceholder')"
         />
-        <input
-          v-model="originPoiId"
-          class="position-panel__input"
-          :placeholder="t('features.simulatedPosition.fromPlaceholder')"
-        />
-        <input
-          v-model="destinationPoiId"
-          class="position-panel__input"
-          :placeholder="t('features.simulatedPosition.toPlaceholder')"
-        />
+        <RouteFields v-model:from="originPoiId" v-model:to="destinationPoiId" />
         <label class="position-panel__radius">
           <span>{{ t('features.simulatedPosition.radiusLabel') }}: {{ accuracyRadius }} m</span>
           <input
@@ -2632,21 +2560,12 @@ onBeforeUnmount(stopCarousel)
           @keyup.enter="placedTextLabelPoiId ? updateTextLabelText() : placeTextLabel()"
         />
         <div class="explore-mode-panel__title">{{ t('features.customTextLabel.colorLabel') }}</div>
-        <div class="trace-style-panel__swatches">
-          <button
-            v-for="color in TEXT_LABEL_COLORS"
-            :key="color.key"
-            type="button"
-            class="trace-style-panel__swatch"
-            :class="{
-              'trace-style-panel__swatch--active': color.value === textLabelColor,
-              'text-label-panel__swatch--dark': color.key === 'dark',
-            }"
-            :style="{ background: color.value }"
-            :aria-label="t(`features.customTextLabel.colors.${color.key}`)"
-            @click="selectTextLabelColor(color.value)"
-          />
-        </div>
+        <ColorSwatches
+          :colors="TEXT_LABEL_COLORS"
+          :selected="textLabelColor"
+          label-prefix="features.customTextLabel.colors"
+          @select="selectTextLabelColor($event.value)"
+        />
         <div class="explore-mode-panel__title">{{ t('features.customTextLabel.sizeLabel') }}</div>
         <div class="explore-mode-panel__segmented icon-marker-panel__orientations">
           <button
@@ -2761,35 +2680,19 @@ onBeforeUnmount(stopCarousel)
           </button>
         </div>
         <div class="explore-mode-panel__title">{{ t('features.customTheme.accentLabel') }}</div>
-        <div class="trace-style-panel__swatches">
-          <button
-            v-for="color in ACCENT_COLORS"
-            :key="color.key"
-            type="button"
-            class="trace-style-panel__swatch"
-            :class="{ 'trace-style-panel__swatch--active': color.value === accentColor }"
-            :style="{ background: color.value }"
-            :aria-label="t(`features.customTheme.colors.${color.key}`)"
-            @click="selectAccentColor(color.value)"
-          />
-        </div>
+        <ColorSwatches
+          :colors="ACCENT_COLORS"
+          :selected="accentColor"
+          label-prefix="features.customTheme.colors"
+          @select="selectAccentColor($event.value)"
+        />
         <div class="explore-mode-panel__title">{{ t('features.customTheme.textAccentLabel') }}</div>
-        <div class="trace-style-panel__swatches">
-          <button
-            v-for="color in TEXT_ACCENT_COLORS"
-            :key="color.key"
-            type="button"
-            class="trace-style-panel__swatch"
-            :class="{
-              'trace-style-panel__swatch--active': color.value === textAccentColor,
-              'text-label-panel__swatch--dark': color.key === 'black',
-              'custom-theme-panel__swatch--light': color.key === 'white',
-            }"
-            :style="{ background: color.value }"
-            :aria-label="t(`features.customTheme.colors.${color.key}`)"
-            @click="selectTextAccentColor(color.value)"
-          />
-        </div>
+        <ColorSwatches
+          :colors="TEXT_ACCENT_COLORS"
+          :selected="textAccentColor"
+          label-prefix="features.customTheme.colors"
+          @select="selectTextAccentColor($event.value)"
+        />
         <div class="goto-poi-panel__actions">
           <button class="goto-poi-panel__button goto-poi-panel__button--secondary" @click="resetCustomTheme">
             {{ t('features.customTheme.reset') }}
@@ -2854,20 +2757,6 @@ onBeforeUnmount(stopCarousel)
 </template>
 
 <style scoped>
-.accuracy-style-panel__option {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-}
-
-.accuracy-style-panel__dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
 .feature {
   position: relative;
   width: 100vw;
@@ -2957,7 +2846,13 @@ onBeforeUnmount(stopCarousel)
 
 .occupancy-panel {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
+}
+
+.occupancy-panel .goto-poi-panel__error {
+  flex-basis: 100%;
+  margin-top: 2px;
 }
 
 .occupancy-panel__input {
@@ -3232,17 +3127,6 @@ onBeforeUnmount(stopCarousel)
   font-size: 1.1em;
 }
 
-.itinerary-panel__input {
-  width: 100%;
-  box-sizing: border-box;
-  border-radius: 6px;
-  border: none;
-  padding: 8px 10px;
-  background: #222;
-  color: #fff;
-  margin-bottom: 10px;
-}
-
 .itinerary-panel__actions {
   display: flex;
   gap: 8px;
@@ -3271,39 +3155,6 @@ onBeforeUnmount(stopCarousel)
 
 .trace-style-panel__title {
   margin-top: 16px;
-}
-
-.trace-style-panel__swatches {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 8px;
-}
-
-.trace-style-panel__swatch {
-  width: 36px;
-  height: 36px;
-  border-radius: 999px;
-  border: 2px solid transparent;
-  cursor: pointer;
-}
-
-.trace-style-panel__swatch--active {
-  border-color: #fff;
-}
-
-/* The "Dark" text color chip would be invisible on the dark panel without an outline. */
-.text-label-panel__swatch--dark:not(.trace-style-panel__swatch--active) {
-  border-color: #666;
-}
-
-/* The active ring is white too, so a selected white chip gets an outer ring to stay distinguishable. */
-.custom-theme-panel__swatch--light.trace-style-panel__swatch--active {
-  box-shadow: 0 0 0 2px #0094f0;
-}
-
-.trace-style-panel__label {
-  font-size: 0.9em;
-  opacity: 0.8;
 }
 
 .navigation-exclude-modalities-panel__toggle {

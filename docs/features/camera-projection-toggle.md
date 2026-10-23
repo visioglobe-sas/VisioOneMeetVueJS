@@ -37,7 +37,7 @@ async function switchProjection(cameraProjection) {
 }
 ```
 
-In this repo, `src/components/VisioOneMap.vue` already runs exactly this lifecycle on mount/unmount, so the feature screen passes `{ cameraProjection }` through its `viewOptions` prop and changes the component's `key` to force Vue to unmount it (`destroyView` + `unloadVenue`) and mount a fresh one (`loadVenue` + `createView`).
+In Vue, a component that runs this lifecycle on mount/unmount (here `src/components/VisioOneMap.vue`) can receive `{ cameraProjection }` through a `viewOptions` prop; changing the component's `key` forces Vue to unmount it (`destroyView` + `unloadVenue`) and mount a fresh one (`loadVenue` + `createView`).
 
 ## Things to know
 

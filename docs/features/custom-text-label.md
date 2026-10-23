@@ -10,9 +10,23 @@ Places your own free text on the map (opening hours, a price, a zone name...) wi
 // Same POI lookup idiom as goto-poi / 3d-icon-marker.
 const anchor = venue.pois.find((p) => p.id === 'B4-UL00-ID0009')
 
-// A POI has no direct lat/lng field: copy the Position of its first label or
-// marker, then nudge it (~4 m) so the new text doesn't overlap the map's own label.
-const anchorPosition = anchor.labels[0]?.position ?? anchor.markers[0]?.position
+// A POI has no lat/lng field of its own: read it off the objects it owns
+// (all carry a WGS84 Position { latitude, longitude, altitude? }). Priority:
+// first label, then first image, then first marker, then the centroid of its
+// first surface's vertices. `exclude` skips objects you added yourself.
+function poiPosition(poi, exclude = []) {
+  const usable = (item) => !exclude.includes(item)
+  const owned = poi.labels.find(usable) ?? poi.images.find(usable) ?? poi.markers.find(usable)
+  if (owned) return owned.position
+  const vertices = poi.surfaces[0]?.positions
+  if (!vertices?.length) return null
+  const mean = (key) => vertices.reduce((sum, v) => sum + (v[key] ?? 0), 0) / vertices.length
+  return { latitude: mean('latitude'), longitude: mean('longitude'), altitude: mean('altitude') }
+}
+
+// Skip your own label on a re-place, then nudge (~4 m) so the new text
+// doesn't overlap the map's own label.
+const anchorPosition = poiPosition(anchor, [myLabel])
 const position = {
   ...anchorPosition,
   latitude: anchorPosition.latitude + 0.00004,
@@ -64,7 +78,7 @@ The returned `Label` exposes the current `poi`, `position`, `width`, `height`, `
 - **One `Label` per `createLabel` call.** Calling `createLabel` again adds a second label, it does not replace the first. Keep the returned reference and `removeLabel` it first if you only want one.
 - **Don't reuse a removed label.** `removeLabel` or `updateLabel` on a label that was already removed throws `Provided label is not registered`. Drop your reference after removing it.
 - **The anchor's floor must be visible.** A label on an indoor POI only renders while that POI's floor is displayed, not in the default global view of a multi-building venue. This demo moves the camera to the anchor with `view.goToPOI(anchor)` right after creating the label.
-- A POI with no `labels[0]` and no `markers[0]` has no position to copy. Handle that as an explicit "no position" state rather than passing `undefined` into `createLabel`.
+- A POI with no label, image, marker or surface has no position to copy. Handle that as an explicit "no position" state rather than passing `undefined` into `createLabel`.
 
 ## Learn more
 

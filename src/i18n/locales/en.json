@@ -5,6 +5,10 @@
     "openControls": "Open controls",
     "closeControls": "Close controls"
   },
+  "common": {
+    "fromPlaceholder": "From (place ID)",
+    "toPlaceholder": "To (place ID)"
+  },
   "features": {
     "resetView": {
       "title": "Reset view",
@@ -15,7 +19,8 @@
       "description": "Toggle a place's occupancy color with simulated data.",
       "placeholder": "Place ID",
       "start": "Simulate occupancy",
-      "stop": "Stop occupancy simulation"
+      "stop": "Stop occupancy simulation",
+      "notFound": "No POI found with this ID."
     },
     "poiClick": {
       "title": "POI click",
@@ -55,8 +60,6 @@
       "title": "Itinerary",
       "description": "Compute and display a route between two place IDs.",
       "panelTitle": "Itinerary",
-      "fromPlaceholder": "From (place ID)",
-      "toPlaceholder": "To (place ID)",
       "go": "Itinerary",
       "clear": "Clear",
       "notFound": "No POI found for one of these IDs.",
@@ -78,8 +81,6 @@
       "title": "Simulated position",
       "description": "Animate a simulated position with an accuracy circle between two POIs.",
       "panelTitle": "Simulated position",
-      "fromPlaceholder": "From (place ID)",
-      "toPlaceholder": "To (place ID)",
       "radiusLabel": "Accuracy radius",
       "start": "Start simulation",
       "stop": "Stop simulation",
@@ -153,7 +154,6 @@
       "remove": "Remove",
       "none": "No dynamic POI created yet.",
       "createdLabel": "Created",
-      "alreadyTracked": "Remove the current dynamic POI before creating another one.",
       "alreadyExists": "A POI with this ID already exists in the venue.",
       "anchorNotFound": "No POI found with this anchor ID.",
       "anchorNoPosition": "This POI has no position to copy (no label or marker)."

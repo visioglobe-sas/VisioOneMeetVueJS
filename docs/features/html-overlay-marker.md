@@ -10,9 +10,23 @@ Overlays a plain HTML element (here, a "Open now · 12:00–14:00" badge) on the
 // Same POI lookup idiom as goto-poi / custom-text-label.
 const anchor = venue.pois.find((p) => p.id === 'B4-UL00-ID0009')
 
-// A POI has no direct lat/lng field: copy the Position of its first label or
-// marker, then nudge it (~4 m) so the badge doesn't cover the map's own label.
-const anchorPosition = anchor.labels[0]?.position ?? anchor.markers[0]?.position
+// A POI has no lat/lng field of its own: read it off the objects it owns
+// (all carry a WGS84 Position { latitude, longitude, altitude? }). Priority:
+// first label, then first image, then first marker, then the centroid of its
+// first surface's vertices. `exclude` skips objects you added yourself.
+function poiPosition(poi, exclude = []) {
+  const usable = (item) => !exclude.includes(item)
+  const owned = poi.labels.find(usable) ?? poi.images.find(usable) ?? poi.markers.find(usable)
+  if (owned) return owned.position
+  const vertices = poi.surfaces[0]?.positions
+  if (!vertices?.length) return null
+  const mean = (key) => vertices.reduce((sum, v) => sum + (v[key] ?? 0), 0) / vertices.length
+  return { latitude: mean('latitude'), longitude: mean('longitude'), altitude: mean('altitude') }
+}
+
+// Skip your own marker on a re-place, then nudge (~4 m) so the badge
+// doesn't overlap the map's own label.
+const anchorPosition = poiPosition(anchor, [myMarker])
 const position = {
   ...anchorPosition,
   latitude: anchorPosition.latitude + 0.00004,

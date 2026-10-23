@@ -11,9 +11,21 @@ Creates, updates and removes a POI (Point Of Interest) at runtime — without re
 // venue.getPOIById in the SDK typings.
 const anchor = venue.pois.find((p) => p.id === anchorId)
 
-// Whichever visual element exists first on the anchor carries a Position in
-// the WGS84 shape createLabel expects ({ latitude, longitude, altitude? }).
-const position = anchor.labels[0]?.position ?? anchor.markers[0]?.position
+// A POI has no lat/lng field of its own: read it off the objects it owns
+// (all carry a WGS84 Position { latitude, longitude, altitude? }). Priority:
+// first label, then first image, then first marker, then the centroid of its
+// first surface's vertices. `exclude` skips objects you added yourself.
+function poiPosition(poi, exclude = []) {
+  const usable = (item) => !exclude.includes(item)
+  const owned = poi.labels.find(usable) ?? poi.images.find(usable) ?? poi.markers.find(usable)
+  if (owned) return owned.position
+  const vertices = poi.surfaces[0]?.positions
+  if (!vertices?.length) return null
+  const mean = (key) => vertices.reduce((sum, v) => sum + (v[key] ?? 0), 0) / vertices.length
+  return { latitude: mean('latitude'), longitude: mean('longitude'), altitude: mean('altitude') }
+}
+
+const position = poiPosition(anchor)
 
 // Create: a bare POI is purely a logical id/floor/categories container.
 const poi = venue.createPOI({ id: newId }) // throws POIAlreadyExistsError on a duplicate id
@@ -39,8 +51,8 @@ venue.removePOI(poi)
 - **`updatePOI` only ever changes categories.** `POIUpdateOptions` has exactly one field, `categories: Category[]` — there is no way to move a POI, change its floor, or touch any visual content through `updatePOI`. Any "edit" story for a POI's visible content has to go through the update method of whichever visual element is attached (`updateLabel`, `updateMarker`, `updateImage`, `updateLine`, `updateSurface`), not `updatePOI`.
 - **`removePOI` cascades.** Removing a POI also removes any visual element attached to it from the view — a separately-called `removeLabel`/`removeMarker`/etc. is redundant (and would throw a `*NotFoundError` if attempted afterward, since the element is already gone).
 - **`POIAlreadyExistsError` on a duplicate id is a normal outcome, not a crash.** `createPOI` throws synchronously when `id` collides with any POI already in the venue (including ones baked into the published map bundle, not just other dynamically-created ones) — wrap the call in a `try`/`catch` and treat it as an expected "pick another id" state.
-- **No coordinate-picking UI here.** This demo sources a WGS84 position by copying an existing POI's own `label`/`marker` position rather than resolving a map-tap into world coordinates — a real "place a pin where the user taps" flow needs the view's own screen-to-world projection, out of scope for this feature.
-- A POI resolved with no `labels[0]` and no `markers[0]` (point/marker-only POIs, or an image/line/surface-only POI) has no position this demo can copy — shown as an explicit "no position to copy" state rather than passing `undefined` into `createLabel`.
+- **No coordinate-picking UI here.** This demo sources a WGS84 position by copying an existing POI's own position (label, image, marker or surface centroid) rather than resolving a map-tap into world coordinates — a real "place a pin where the user taps" flow needs the view's own screen-to-world projection, out of scope for this feature.
+- A POI with no label, image, marker or surface (e.g. a line-only POI) has no position this demo can copy — shown as an explicit "no position to copy" state rather than passing `undefined` into `createLabel`.
 
 ## Learn more
 
