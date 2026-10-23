@@ -4,13 +4,16 @@ import { useI18n } from 'vue-i18n'
 import { features } from '../features'
 
 const { t } = useI18n()
+
+// The app name is the page title set in index.html.
+const appName = document.title
 </script>
 
 <template>
   <main class="home">
     <div class="home__header">
       <img src="/favicon.svg" alt="" class="home__logo" />
-      <span class="home__app-name">VisioOne + Vue 3 by VisioGlobe</span>
+      <span class="home__app-name">{{ appName }} by VisioGlobe</span>
     </div>
 
     <h1>{{ t('home.title') }}</h1>
