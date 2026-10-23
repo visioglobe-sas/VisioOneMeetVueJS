@@ -58,6 +58,8 @@ Each feature below is a self-contained example screen. The bullet links go to a 
 - `src/App.vue` — renders the router view; navigation between the home menu and each feature screen goes through `vue-router`.
 - `src/views/HomeView.vue` — the menu screen, listing the features registered in `src/features.js`.
 - `src/views/FeatureView.vue` — hosts `VisioOneMap` for each feature screen, reads the map configuration from environment variables, and drives the SDK calls specific to the selected feature.
+- `src/sdk/pois.js` — `findPoi(venue, id)` and `poiDisplayPosition(poi)`: the POI lookup and the POI position rule (first label, then image, then marker, then the centroid of its first surface) shared by every feature.
+- `src/components/BottomSheet.vue`, `RouteFields.vue`, `ColorSwatches.vue` — the controls panel (swipe down, tap outside or press Escape to close), the From/To fields and the color chips; `src/colors.js` holds the palette.
 - `src/demoMap.js` — the demo map's POI ids used as default input values (and the dedicated custom-data map hash); replace them with your own map's ids.
 
 ## Environment variables

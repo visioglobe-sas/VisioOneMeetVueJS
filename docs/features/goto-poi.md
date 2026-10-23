@@ -23,7 +23,7 @@ function goToPoi(targetId) {
 }
 
 function clearHighlight(poi) {
-  poi.surfaces.forEach((surface) => venue.updateSurface(surface, { selectionColor: undefined }))
+  poi.surfaces.forEach((surface) => venue.updateSurface(surface, { selectionColor: 'default' }))
 }
 ```
 
@@ -33,4 +33,4 @@ function clearHighlight(poi) {
 
 - There's no `venue.getPOIById`; `venue.pois.find(...)` resolves to `undefined` (no exception) when the ID doesn't match anything on the loaded venue.
 - `goToPOI` requires the full `POI` object, not just its ID — resolve it via `venue.pois.find` first.
-- The surface highlight (`selectionColor`) is entirely optional — `view.goToPOI` works fine on its own. `selectionColor: undefined` resets a surface to normal, the same pattern used for `color` in the occupancy feature.
+- The surface highlight (`selectionColor`) is entirely optional — `view.goToPOI` works fine on its own. To remove the highlight, set `selectionColor: 'default'`, which restores the view-wide selection color (`View.surfaceSelectionColor`), per `SurfaceUpdateOptions.d.ts`. Passing `undefined` leaves the custom color in place.
