@@ -3,7 +3,8 @@
     "title": "VisioOne demos",
     "back": "Back",
     "openControls": "Open controls",
-    "closeControls": "Close controls"
+    "closeControls": "Close controls",
+    "featureNotFound": "Unknown feature: {slug}"
   },
   "common": {
     "fromPlaceholder": "From (place ID)",

@@ -52,14 +52,19 @@ Each feature below is a self-contained example screen. The bullet links go to a 
 - [Camera Showcase](docs/features/camera-showcase-carousel.md) — an endless automatic camera tour for kiosks, chaining `view.goToFloor()` and `view.goToPOI()` `AnimationPromise`s, pausing on touch and resuming after 10 s idle.
 - [Protected Map (Token)](docs/features/auth-token.md) — code sample (placeholder values, not loaded by the demo) for loading a map from the protected map server with `LoadOptions.authorizationToken`, refreshing it via `venue.setAuthorizationToken()` and detecting `UnauthorizedError`.
 
+## Where is the code of feature X?
+
+In `src/features/<Slug>.vue`, named after the feature's slug: `docs/features/goto-poi.md` documents `src/features/GotoPoi.vue`, `docs/features/3d-icon-marker.md` documents `src/features/3dIconMarker.vue`, and so on. Each file holds that feature's SDK calls, its state, its panel and any map option it needs (a different map hash, view options, a reload). The only exceptions are the few pieces of logic shared by several features, in `src/composables/` (see below).
+
 ## Structure
 
 - `src/components/VisioOneMap.vue` — wraps the VisioOne SDK lifecycle (`createVisioOne`, `loadVenue`, `createView`, teardown) as a Vue component. Emits `ready`, `error`, and `poi-click`, and exposes `visioOne`/`venue`/`view` via `defineExpose` for parent components that need direct SDK access (navigation, custom POIs, camera control, etc.).
-- `src/App.vue` — renders the router view; navigation between the home menu and each feature screen goes through `vue-router`.
-- `src/views/HomeView.vue` — the menu screen, listing the features registered in `src/features.js`.
-- `src/views/FeatureView.vue` — hosts `VisioOneMap` for each feature screen, reads the map configuration from environment variables, and drives the SDK calls specific to the selected feature.
-- `src/sdk/pois.js` — `findPoi(venue, id)` and `poiDisplayPosition(poi)`: the POI lookup and the POI position rule (first label, then image, then marker, then the centroid of its first surface) shared by every feature.
-- `src/components/BottomSheet.vue`, `RouteFields.vue`, `ColorSwatches.vue` — the controls panel (swipe down, tap outside or press Escape to close), the From/To fields and the color chips; `src/colors.js` holds the palette.
+- `src/features/<Slug>.vue` — one component per feature screen (see above). Each one keeps the `venue`/`view` it receives on `ready` in a `shallowRef` (never `ref()`: a deep reactive proxy around an SDK object breaks the SDK's own identity checks).
+- `src/composables/` — logic shared by several features: `useItinerary.js` (route between two POIs: compute-navigation, custom-navigation-trace, navigation-exclude-modalities, accessible-mode), `useSimulatedPosition.js` (simulated tracked position: simulated-position, camera-lock-on-position, accuracy-circle-style, geofencing) and `useFloorSelector.js` (app-driven floor picker: floor-selector, native-ui-replacement).
+- `src/sdk/pois.js` — `findPoi(venue, id)`, `poiDisplayPosition(poi)` (the POI position rule: first label, then image, then marker, then the centroid of its first surface) and `focusCameraOnPoi(view, poi)`.
+- `src/components/FeatureScreen.vue` — the screen shell every feature wraps: the map, the top bar (back link + title), the button that opens the controls panel and the panel itself. It reads the map hash, base URL and token from the environment variables and passes them to `VisioOneMap`, unless the feature overrides them.
+- `src/features.js` — the registry of feature screens (slug, title, description, component), listed by the menu (`src/views/HomeView.vue`) and rendered by `src/views/FeatureView.vue` for `/feature/:slug`.
+- `src/components/BottomSheet.vue`, `RouteFields.vue`, `ColorSwatches.vue` — the controls panel (swipe down, tap outside or press Escape to close), the From/To fields and the color chips; `src/styles/panel.css` holds the panel styles shared by every feature, `src/colors.js` the palette.
 - `src/demoMap.js` — the demo map's POI ids used as default input values (and the dedicated custom-data map hash); replace them with your own map's ids.
 
 ## Environment variables

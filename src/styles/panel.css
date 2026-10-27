@@ -1,0 +1,252 @@
+/* Shared classes of the feature panels (the BottomSheet content of every
+   src/features/*.vue screen). Feature-specific tweaks stay scoped in the
+   feature itself. Imported once, globally, in src/main.js. */
+
+.panel-title {
+  margin: 0 0 12px;
+  font-size: 1.1em;
+}
+
+/* Text input. */
+.panel-input {
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 6px;
+  border: none;
+  padding: 8px 10px;
+  background: #222;
+  color: #fff;
+  margin-bottom: 10px;
+}
+
+/* Row of buttons sharing the width. */
+.panel-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.panel-button {
+  flex: 1;
+  border-radius: 6px;
+  border: none;
+  padding: 8px 14px;
+  background: #057dbc;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* A lone, full-width button. */
+.panel-button--block {
+  width: 100%;
+}
+
+.panel-button--secondary {
+  background: #333;
+}
+
+.panel-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.panel-error {
+  margin-top: 10px;
+  font-size: 0.9em;
+  color: #ff6b6b;
+}
+
+.panel-status {
+  margin-top: 10px;
+  font-size: 0.9em;
+  font-weight: 600;
+}
+
+/* Muted one-line message ("nothing yet", "empty"). */
+.panel-note {
+  margin-top: 10px;
+  font-size: 0.9em;
+  opacity: 0.8;
+}
+
+/* Card-like block of text. */
+.panel-entry {
+  border-radius: 6px;
+  padding: 10px 12px;
+  background: #222;
+  margin-bottom: 8px;
+}
+
+.panel-entry:last-child {
+  margin-bottom: 0;
+}
+
+/* Label + switch row. */
+.panel-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-radius: 6px;
+  padding: 10px 12px;
+  background: #222;
+  margin-bottom: 8px;
+  cursor: pointer;
+}
+
+.panel-row:last-child {
+  margin-bottom: 0;
+}
+
+.panel-row--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.panel-row__label {
+  font-weight: 600;
+}
+
+/* A checkbox restyled as an on/off switch. */
+.panel-switch {
+  appearance: none;
+  position: relative;
+  flex-shrink: 0;
+  width: 44px;
+  height: 24px;
+  border-radius: 12px;
+  background: #444;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.panel-switch::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.2s ease;
+}
+
+.panel-switch:checked {
+  background: #057dbc;
+}
+
+.panel-switch:checked::before {
+  transform: translateX(20px);
+}
+
+.panel-switch:disabled {
+  cursor: not-allowed;
+}
+
+/* Segmented control: one active option among a few. */
+.panel-segmented {
+  display: flex;
+  gap: 8px;
+}
+
+.panel-option {
+  flex: 1;
+  border-radius: 6px;
+  border: none;
+  padding: 12px 10px;
+  background: #222;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.panel-option--active {
+  background: #057dbc;
+}
+
+.panel-option:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Vertical list of choices with an optional "current" badge. */
+.panel-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 40vh;
+  overflow-y: auto;
+}
+
+.panel-choice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-radius: 6px;
+  border: none;
+  padding: 10px 14px;
+  background: #222;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+
+.panel-choice--active {
+  background: #057dbc;
+}
+
+.panel-choice:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.panel-choice__badge {
+  font-size: 0.75em;
+  font-weight: 600;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+/* Key/value list. */
+.panel-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+  max-height: 40vh;
+  overflow-y: auto;
+}
+
+.panel-list__entry {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  border-radius: 6px;
+  padding: 8px 12px;
+  background: #222;
+}
+
+.panel-list__key {
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+.panel-list__value {
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+/* Range slider with its label above. */
+.panel-slider {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+  font-size: 0.9em;
+}
+
+.panel-slider input {
+  width: 100%;
+}
