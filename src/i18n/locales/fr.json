@@ -3,7 +3,8 @@
     "title": "Démos VisioOne",
     "back": "Retour",
     "openControls": "Ouvrir les commandes",
-    "closeControls": "Fermer les commandes"
+    "closeControls": "Fermer les commandes",
+    "featureNotFound": "Fonctionnalité inconnue : {slug}"
   },
   "common": {
     "fromPlaceholder": "Départ (ID du lieu)",
