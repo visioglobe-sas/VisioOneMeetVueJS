@@ -62,8 +62,8 @@ onMounted(async () => {
 onBeforeUnmount(async () => {
   // Teardown errors are caught and logged rather than surfaced as unhandled
   // rejections: VisioOneMap is unmounted/remounted on every reload (as
-  // custom-base-url does via :key). SDK 1.0.5's unloadVenue() threw on every
-  // call (fixed in 1.0.9). See docs/features/custom-base-url.md.
+  // custom-base-url does via :key), and a venue whose load failed may be
+  // left half-initialized.
   try {
     if (view.value) {
       view.value.removeEventListener('poiclick', handlePOIClick)

@@ -7,6 +7,7 @@ Dynamically colors a POI's surface to reflect an occupancy status (free / soon o
 ## SDK usage
 
 ```js
+// color: an occupancy color, or 'initial' to restore the map's own color.
 function updateOccupancy(targetPlaceId, color) {
   const venue = venueRef.value
   if (!venue) return
@@ -21,5 +22,5 @@ A POI's surfaces are colored individually via `venue.updateSurface`; there is no
 ## Things to know
 
 - There's no `venue.getPOIById` — looking up a POI is always `venue.pois.find(p => p.id === id)`. It resolves to `undefined` with no error if the ID doesn't match anything on the loaded venue, so check before using the result.
-- `color: undefined` resets a surface to its normal appearance — it isn't a default color you need to hardcode.
+- To give the surface its normal map color back, update it with `color: 'initial'` (the reset value documented in `SurfaceUpdateOptions.d.ts`). `undefined` does not reset it: the last color stays.
 - `venue` is only populated after the `ready` event; calling `updateOccupancy` before that is a no-op as long as the caller guards on `venueRef.value` being set.

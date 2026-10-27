@@ -5,6 +5,10 @@
     "openControls": "Ouvrir les commandes",
     "closeControls": "Fermer les commandes"
   },
+  "common": {
+    "fromPlaceholder": "Départ (ID du lieu)",
+    "toPlaceholder": "Arrivée (ID du lieu)"
+  },
   "features": {
     "resetView": {
       "title": "Réinitialiser la vue",
@@ -15,7 +19,8 @@
       "description": "Bascule la couleur d'occupation d'un lieu avec des données simulées.",
       "placeholder": "ID du lieu",
       "start": "Simuler l'occupation",
-      "stop": "Arrêter la simulation"
+      "stop": "Arrêter la simulation",
+      "notFound": "Aucun POI trouvé avec cet ID."
     },
     "poiClick": {
       "title": "Clic sur un POI",
@@ -55,8 +60,6 @@
       "title": "Itinéraire",
       "description": "Calcule et affiche un itinéraire entre deux ID de lieu.",
       "panelTitle": "Itinéraire",
-      "fromPlaceholder": "Départ (ID du lieu)",
-      "toPlaceholder": "Arrivée (ID du lieu)",
       "go": "Itinéraire",
       "clear": "Effacer",
       "notFound": "Aucun POI trouvé pour l'un de ces ID.",
@@ -78,8 +81,6 @@
       "title": "Position simulée",
       "description": "Anime une position simulée avec un cercle de précision entre deux POI.",
       "panelTitle": "Position simulée",
-      "fromPlaceholder": "Départ (ID du lieu)",
-      "toPlaceholder": "Arrivée (ID du lieu)",
       "radiusLabel": "Rayon de précision",
       "start": "Démarrer la simulation",
       "stop": "Arrêter la simulation",
@@ -153,7 +154,6 @@
       "remove": "Supprimer",
       "none": "Aucun POI dynamique créé pour l'instant.",
       "createdLabel": "Créé",
-      "alreadyTracked": "Supprimez le POI dynamique actuel avant d'en créer un autre.",
       "alreadyExists": "Un POI avec cet ID existe déjà dans le lieu.",
       "anchorNotFound": "Aucun POI trouvé avec cet ID d'ancrage.",
       "anchorNoPosition": "Ce POI n'a aucune position à copier (pas de label ni de marker)."

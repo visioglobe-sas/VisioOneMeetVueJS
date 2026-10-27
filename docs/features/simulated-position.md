@@ -18,15 +18,18 @@ function stopTracking() {
 }
 ```
 
-A POI has no direct `latitude`/`longitude` field — resolve a position from the first sub-object that carries one:
+A POI has no direct `latitude`/`longitude` field. Read its position off the objects it owns, all of which carry a `Position` of the shape `injectTrackedPosition` expects (`{ latitude, longitude, altitude? }`), in this order: its first label, its first image, its first marker, else the centroid of its first surface's vertices:
 
 ```js
-function resolvePoiPosition(poi) {
-  return poi.markers?.[0]?.position ?? poi.labels?.[0]?.position ?? poi.images?.[0]?.position ?? null
+function poiPosition(poi) {
+  const owned = poi.labels[0] ?? poi.images[0] ?? poi.markers[0]
+  if (owned) return owned.position
+  const vertices = poi.surfaces[0]?.positions
+  if (!vertices?.length) return null
+  const mean = (key) => vertices.reduce((sum, v) => sum + (v[key] ?? 0), 0) / vertices.length
+  return { latitude: mean('latitude'), longitude: mean('longitude'), altitude: mean('altitude') }
 }
 ```
-
-All three (`markers`, `labels`, `images`) carry a `Position` of the same shape (`{ latitude, longitude, altitude? }`) expected by `injectTrackedPosition`, so no conversion is needed once one is found.
 
 ## Things to know
 
