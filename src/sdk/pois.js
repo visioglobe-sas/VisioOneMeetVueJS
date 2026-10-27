@@ -46,3 +46,13 @@ export function poiDisplayPosition(poi, exclude = []) {
   if (marker) return marker.position
   return centroid(poi.surfaces?.[0]?.positions)
 }
+
+// Camera move shared by goto-poi, 3d-icon-marker, custom-text-label and
+// html-overlay-marker: frames the POI and shows its floor (an image, label or
+// marker on an indoor POI only renders while that floor is shown).
+export function focusCameraOnPoi(view, poi) {
+  view?.goToPOI(poi, {
+    orientation: { pitch: 20 },
+    padding: { top: 100, bottom: 100, left: 100, right: 100 },
+  })
+}
